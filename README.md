@@ -13,10 +13,6 @@
   <strong>A multi-agent AI pipeline that audits any GitHub repository, detects bugs & vulnerabilities across the full stack, and generates professional audit reports.</strong>
 </p>
 
-<p align="center">
-  <em>Built by Neural Ninjas</em>
-</p>
-
 ---
 
 ## 📋 Table of Contents
