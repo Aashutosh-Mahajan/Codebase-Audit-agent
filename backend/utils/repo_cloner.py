@@ -4,6 +4,7 @@ Performs shallow clones of GitHub repositories into the job storage directory.
 """
 
 import os
+import sys
 import shutil
 import logging
 from pathlib import Path
@@ -82,26 +83,37 @@ def clone_repo(
 
     logger.info(f"Cloning repository {repo_url} into {clone_dir} (depth=1)")
 
+    # Build clone kwargs — kill_after_timeout is only supported on non-Windows
+    clone_kwargs = {
+        "depth": 1,
+        "single_branch": True,
+    }
+    if sys.platform != "win32":
+        clone_kwargs["kill_after_timeout"] = clone_timeout
+
     try:
         git.Repo.clone_from(
             clone_url,
             clone_dir,
-            depth=1,
-            single_branch=True,
-            kill_after_timeout=clone_timeout,
+            **clone_kwargs,
         )
     except git.exc.GitCommandError as e:
-        stderr = str(e.stderr) if e.stderr else str(e)
+        stderr = str(e.stderr) if e.stderr else ""
+        full_error = str(e)
+        logger.error(f"Git clone error for {repo_url}: {full_error}")
 
         if "Authentication failed" in stderr or "could not read Username" in stderr:
             raise CloneError("auth_failure", f"Authentication failed for {repo_url}. Check your GitHub token.")
         elif "Repository not found" in stderr or "not found" in stderr.lower():
             raise CloneError("not_found", f"Repository not found: {repo_url}")
-        elif "timed out" in stderr.lower() or "timeout" in stderr.lower():
+        elif "timed out" in stderr.lower():
             raise CloneError("timeout", f"Clone timed out after {clone_timeout}s for {repo_url}")
         else:
-            raise CloneError("unknown", f"Git clone failed: {stderr}")
+            raise CloneError("unknown", f"Git clone failed: {full_error}")
+    except FileNotFoundError:
+        raise CloneError("unknown", "Git is not installed or not found in PATH. Please install Git.")
     except Exception as e:
+        logger.error(f"Unexpected clone error: {type(e).__name__}: {e}")
         raise CloneError("unknown", f"Unexpected error during clone: {str(e)}")
 
     repo_path = os.path.abspath(clone_dir)

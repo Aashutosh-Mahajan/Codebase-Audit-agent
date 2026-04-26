@@ -7,6 +7,7 @@ Flow: orchestrator → [Send() fan-out: 6 agents in parallel] → aggregator →
 import os
 import logging
 import operator
+import fnmatch
 from typing import Annotated, Optional, TypedDict
 
 from langgraph.graph import StateGraph, START, END
@@ -25,6 +26,27 @@ from backend.report.generator import generate_markdown_report
 
 logger = logging.getLogger(__name__)
 
+
+def _read_int_env(var_name: str, default: int, min_value: int = 1) -> int:
+    """Read an integer env var safely and fall back to default when invalid."""
+    raw = os.environ.get(var_name)
+    if raw is None:
+        return default
+
+    try:
+        parsed = int(raw)
+        if parsed < min_value:
+            raise ValueError()
+        return parsed
+    except ValueError:
+        logger.warning(f"Invalid {var_name}={raw!r}; using default {default}.")
+        return default
+
+
+DEFAULT_MAX_FILES_PER_AGENT = _read_int_env("MAX_FILES_PER_AGENT", 20, min_value=1)
+DEFAULT_RATE_LIMIT_RPM = _read_int_env("OPENAI_RATE_LIMIT_RPM", 20, min_value=1)
+DEFAULT_MAX_CHUNKS_PER_FILE = _read_int_env("MAX_CHUNKS_PER_FILE", 2, min_value=1)
+
 # ─────────────────────────────────────────────
 # In-memory job store (shared with FastAPI routes)
 # ─────────────────────────────────────────────
@@ -40,6 +62,68 @@ AGENT_CLASSES = {
 }
 
 ALL_AGENT_NAMES = list(AGENT_CLASSES.keys())
+
+AGENT_PRIORITY_PATTERNS: dict[str, list[str]] = {
+    "security": [
+        "**/auth*", "**/*auth*", "**/*login*", "**/*token*", "**/*secret*",
+        "**/*.env*", "**/*jwt*", "**/*oauth*", "**/*permission*",
+    ],
+    "backend": [
+        "**/api/**", "**/routes/**", "**/controllers/**", "**/views/**",
+        "**/service*/**", "**/handler*/**", "**/main.py", "**/app.py",
+    ],
+    "frontend": [
+        "**/src/**", "**/pages/**", "**/components/**", "**/app.*", "**/index.*",
+    ],
+    "database": [
+        "**/migrations/**", "**/*model*", "**/*.sql", "**/*schema*", "**/*repository*",
+    ],
+    "devops": [
+        "**/dockerfile*", "**/docker-compose*.yml", "**/docker-compose*.yaml",
+        "**/.github/workflows/**", "**/k8s/**", "**/kubernetes/**", "**/*.tf", "**/*.hcl",
+    ],
+    "dependency": [
+        "**/package.json", "**/package-lock.json", "**/yarn.lock", "**/pnpm-lock.yaml",
+        "**/requirements*.txt", "**/pyproject.toml", "**/go.mod", "**/pom.xml",
+        "**/cargo.toml", "**/gemfile", "**/composer.json",
+    ],
+}
+
+
+def _score_file_for_agent(agent_name: str, rel_path: str) -> int:
+    """Assign a lightweight relevance score so we scan high-value files first."""
+    normalized = rel_path.lower()
+    score = 0
+
+    for pattern in AGENT_PRIORITY_PATTERNS.get(agent_name, []):
+        if fnmatch.fnmatch(normalized, pattern):
+            score += 10
+
+    # Prefer shallower files as a tie-breaker (entry points/config files).
+    depth = normalized.count("/")
+    score += max(0, 3 - depth)
+    return score
+
+
+def _limit_file_map(file_map: dict[str, list[str]], max_files_per_agent: int) -> tuple[dict[str, list[str]], dict[str, int]]:
+    """Cap each agent's file list to reduce LLM calls and token spend."""
+    limited_map: dict[str, list[str]] = {}
+    dropped_counts: dict[str, int] = {}
+
+    for agent_name, files in file_map.items():
+        unique_files = sorted(set(files))
+        ranked_files = sorted(
+            unique_files,
+            key=lambda p: (-_score_file_for_agent(agent_name, p), p.count("/"), p),
+        )
+
+        if len(ranked_files) > max_files_per_agent:
+            limited_map[agent_name] = ranked_files[:max_files_per_agent]
+            dropped_counts[agent_name] = len(ranked_files) - max_files_per_agent
+        else:
+            limited_map[agent_name] = ranked_files
+
+    return limited_map, dropped_counts
 
 
 def _update_job_status(job_id: str, **kwargs) -> None:
@@ -66,7 +150,11 @@ class AuditState(TypedDict):
     repo_url: str
     branch: str
     github_token: Optional[str]
+    include_patterns: list[str]
     exclude_patterns: list[str]
+    max_files_per_agent: int
+    rate_limit_rpm: int
+    max_chunks_per_file: int
     repo_path: str
     file_map: dict[str, list[str]]
     agent_findings: Annotated[dict[str, list], _merge_findings]
@@ -87,7 +175,9 @@ async def orchestrator_node(state: AuditState) -> dict:
     job_id = state["job_id"]
     repo_url = state["repo_url"]
     github_token = state.get("github_token")
+    include_patterns = state.get("include_patterns", [])
     exclude_patterns = state.get("exclude_patterns", [])
+    max_files_per_agent = state.get("max_files_per_agent") or DEFAULT_MAX_FILES_PER_AGENT
 
     _update_job_status(job_id, status="cloning", current_step=f"Cloning {repo_url}...", progress_percent=5)
 
@@ -99,12 +189,23 @@ async def orchestrator_node(state: AuditState) -> dict:
         return {"error": str(e), "status": "failed"}
 
     _update_job_status(job_id, status="routing", current_step="Analyzing file structure...", progress_percent=15)
-    file_map = route_files(repo_path, exclude_patterns)
+    file_map = route_files(
+        repo_path=repo_path,
+        exclude_patterns=exclude_patterns,
+        include_patterns=include_patterns,
+    )
+    file_map, dropped_counts = _limit_file_map(file_map, max_files_per_agent)
 
     active_agents = [name for name in ALL_AGENT_NAMES if file_map.get(name)]
     file_summary = ", ".join(f"{k}: {len(v)}" for k, v in file_map.items() if v)
+    dropped_summary = ", ".join(f"{k}: -{v}" for k, v in dropped_counts.items() if v)
+
+    step_msg = f"Routed files ({file_summary})"
+    if dropped_summary:
+        step_msg += f" | file cap applied ({dropped_summary})"
+
     _update_job_status(
-        job_id, current_step=f"Routed files ({file_summary})",
+        job_id, current_step=step_msg,
         progress_percent=20, agents_queued=active_agents,
     )
 
@@ -155,8 +256,14 @@ async def agent_worker_node(state: dict) -> dict:
         jobs_store[job_id]["agents_running"] = running
 
     model_name = os.environ.get("OPENAI_MODEL", "gpt-5.4-mini")
+    rate_limit_rpm = state.get("rate_limit_rpm", DEFAULT_RATE_LIMIT_RPM)
+    max_chunks_per_file = state.get("max_chunks_per_file", DEFAULT_MAX_CHUNKS_PER_FILE)
     agent_cls = AGENT_CLASSES[agent_name]
-    agent = agent_cls(model_name=model_name)
+    agent = agent_cls(
+        model_name=model_name,
+        rate_limit_rpm=rate_limit_rpm,
+        max_chunks_per_file=max_chunks_per_file,
+    )
 
     try:
         findings = await agent.analyze_files(agent_files, repo_path)

@@ -154,12 +154,25 @@ if "results" not in st.session_state:
 # ─────────────────────────────────────────────
 # API Helpers
 # ─────────────────────────────────────────────
-def start_audit(repo_url, branch, github_token, exclude_patterns):
+def start_audit(
+    repo_url,
+    branch,
+    github_token,
+    include_patterns,
+    exclude_patterns,
+    max_files_per_agent,
+    max_chunks_per_file,
+    rate_limit_rpm,
+):
     """POST /audit to start a new audit job."""
     payload = {
         "repo_url": repo_url,
         "branch": branch,
+        "include_patterns": [p.strip() for p in include_patterns.split(",") if p.strip()],
         "exclude_patterns": [p.strip() for p in exclude_patterns.split(",") if p.strip()],
+        "max_files_per_agent": int(max_files_per_agent),
+        "max_chunks_per_file": int(max_chunks_per_file),
+        "rate_limit_rpm": int(rate_limit_rpm),
     }
     if github_token:
         payload["github_token"] = github_token
@@ -220,6 +233,42 @@ def render_input_screen():
             height=80,
         )
 
+        include_patterns = st.text_input(
+            "Include patterns (comma-separated, optional)",
+            value="",
+            help="If set, only matching files are scanned (example: src/**/*.py, backend/**/*.py)",
+        )
+
+        st.markdown("### Credit Controls")
+        cc1, cc2, cc3 = st.columns(3)
+        with cc1:
+            max_files_per_agent = st.number_input(
+                "Max files/agent",
+                min_value=1,
+                max_value=500,
+                value=20,
+                step=1,
+                help="Hard cap on how many files each specialist scans",
+            )
+        with cc2:
+            max_chunks_per_file = st.number_input(
+                "Max chunks/file",
+                min_value=1,
+                max_value=20,
+                value=2,
+                step=1,
+                help="Limits large-file chunking to control token usage",
+            )
+        with cc3:
+            rate_limit_rpm = st.number_input(
+                "LLM rate limit (RPM)",
+                min_value=1,
+                max_value=600,
+                value=20,
+                step=1,
+                help="Global requests per minute sent to the LLM",
+            )
+
         st.markdown("")
         col_btn = st.columns([1, 2, 1])
         with col_btn[1]:
@@ -230,7 +279,16 @@ def render_input_screen():
                     st.warning("Please enter a valid URL starting with http:// or https://")
                 else:
                     with st.spinner("Starting audit..."):
-                        result = start_audit(repo_url, branch, github_token, exclude_patterns)
+                        result = start_audit(
+                            repo_url=repo_url,
+                            branch=branch,
+                            github_token=github_token,
+                            include_patterns=include_patterns,
+                            exclude_patterns=exclude_patterns,
+                            max_files_per_agent=max_files_per_agent,
+                            max_chunks_per_file=max_chunks_per_file,
+                            rate_limit_rpm=rate_limit_rpm,
+                        )
                         if result and "job_id" in result:
                             st.session_state.job_id = result["job_id"]
                             st.session_state.repo_url = repo_url
@@ -337,22 +395,56 @@ def render_results_screen():
 
     # Download buttons
     st.markdown("### 📥 Download Reports")
-    dl1, dl2, dl3 = st.columns([1, 1, 2])
-    with dl1:
+    md_ready = results.get("report_md_ready", False)
+    pdf_ready = results.get("report_pdf_ready", False)
+
+    md_bytes = b""
+    pdf_bytes = b""
+
+    if md_ready:
         try:
             md_resp = requests.get(f"{FASTAPI_BASE_URL}/report/{job_id}/download?format=md", timeout=30)
             if md_resp.status_code == 200:
-                st.download_button("⬇️ Download .md Report", data=md_resp.content, file_name=f"audit_report_{job_id[:8]}.md", mime="text/markdown", use_container_width=True)
+                md_bytes = md_resp.content
+            else:
+                md_ready = False
         except Exception:
-            st.warning("Markdown report not available")
+            md_ready = False
 
-    with dl2:
+    if pdf_ready:
         try:
             pdf_resp = requests.get(f"{FASTAPI_BASE_URL}/report/{job_id}/download?format=pdf", timeout=30)
             if pdf_resp.status_code == 200:
-                st.download_button("⬇️ Download .pdf Report", data=pdf_resp.content, file_name=f"audit_report_{job_id[:8]}.pdf", mime="application/pdf", use_container_width=True)
+                pdf_bytes = pdf_resp.content
+            else:
+                pdf_ready = False
         except Exception:
-            st.info("PDF report not available")
+            pdf_ready = False
+
+    dl1, dl2, dl3 = st.columns([1, 1, 2])
+    with dl1:
+        st.download_button(
+            "⬇️ Download .md Report",
+            data=md_bytes,
+            file_name=f"audit_report_{job_id[:8]}.md",
+            mime="text/markdown",
+            use_container_width=True,
+            disabled=not md_ready,
+        )
+        if not md_ready:
+            st.caption("Markdown report is not ready yet.")
+
+    with dl2:
+        st.download_button(
+            "⬇️ Download .pdf Report",
+            data=pdf_bytes,
+            file_name=f"audit_report_{job_id[:8]}.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+            disabled=not pdf_ready,
+        )
+        if not pdf_ready:
+            st.caption("PDF report is not ready yet.")
 
     st.markdown("---")
 

@@ -21,6 +21,24 @@ class AuditRequest(BaseModel):
         default_factory=lambda: ["node_modules", ".git", "dist", "__pycache__", ".venv", "venv", ".env"],
         description="File/directory patterns to exclude"
     )
+    max_files_per_agent: int = Field(
+        default=20,
+        ge=1,
+        le=500,
+        description="Maximum number of files each specialist agent can scan"
+    )
+    max_chunks_per_file: int = Field(
+        default=2,
+        ge=1,
+        le=20,
+        description="Maximum chunks to analyze per file to control token usage"
+    )
+    rate_limit_rpm: int = Field(
+        default=20,
+        ge=1,
+        le=600,
+        description="Global LLM request rate limit in requests per minute"
+    )
 
 
 class AuditResponse(BaseModel):

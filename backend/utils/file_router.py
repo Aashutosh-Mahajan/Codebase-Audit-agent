@@ -112,6 +112,24 @@ def _should_exclude(path: str, exclude_patterns: list[str]) -> bool:
     return False
 
 
+def _matches_include_patterns(rel_path: str, filename: str, include_patterns: list[str]) -> bool:
+    """Check whether a file should be included when include patterns are provided."""
+    rel_path_lower = rel_path.lower()
+    filename_lower = filename.lower()
+
+    for pattern in include_patterns:
+        normalized = pattern.strip()
+        if not normalized:
+            continue
+
+        normalized_lower = normalized.lower()
+        if fnmatch.fnmatch(rel_path_lower, normalized_lower):
+            return True
+        if fnmatch.fnmatch(filename_lower, normalized_lower):
+            return True
+    return False
+
+
 def _is_binary_file(file_path: str) -> bool:
     """Quick heuristic check if a file is binary (skip binary files)."""
     try:
@@ -128,6 +146,7 @@ def _is_binary_file(file_path: str) -> bool:
 def route_files(
     repo_path: str,
     exclude_patterns: list[str] | None = None,
+    include_patterns: list[str] | None = None,
 ) -> dict[str, list[str]]:
     """
     Walk the cloned repo's file tree and group every file into agent buckets.
@@ -137,6 +156,8 @@ def route_files(
     Args:
         repo_path: Absolute path to the cloned repository root
         exclude_patterns: Glob patterns for files/dirs to skip
+        include_patterns: Optional allowlist glob patterns. If provided,
+            only matching files are routed.
 
     Returns:
         Dictionary mapping agent names to lists of relative file paths.
@@ -144,6 +165,8 @@ def route_files(
     """
     if exclude_patterns is None:
         exclude_patterns = DEFAULT_EXCLUDES
+    if include_patterns is None:
+        include_patterns = []
 
     file_map: dict[str, list[str]] = {
         "frontend": [],
@@ -175,6 +198,10 @@ def route_files(
 
             # Skip excluded files
             if _should_exclude(rel_path, exclude_patterns):
+                skipped_files += 1
+                continue
+
+            if include_patterns and not _matches_include_patterns(rel_path, filename, include_patterns):
                 skipped_files += 1
                 continue
 

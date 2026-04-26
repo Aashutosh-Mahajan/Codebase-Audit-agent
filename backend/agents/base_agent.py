@@ -4,6 +4,8 @@ Provides file reading, chunking, LLM integration, and structured response parsin
 """
 
 import json
+import os
+import time
 import asyncio
 import logging
 from abc import ABC, abstractmethod
@@ -12,13 +14,61 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from backend.api.models import Finding, FileLocation
-from backend.utils.chunker import chunk_file, read_file_content
+from backend.utils.chunker import chunk_file
 
 logger = logging.getLogger(__name__)
 
 # Maximum retries per LLM call
 MAX_RETRIES = 3
 RETRY_BACKOFF_BASE = 2  # seconds
+DEFAULT_RATE_LIMIT_RPM = 20
+DEFAULT_MAX_CHUNKS_PER_FILE = 2
+
+
+def _read_int_env(var_name: str, default: int, min_value: int = 1) -> int:
+    """Read an integer env var safely with bounds and fallback."""
+    raw = os.environ.get(var_name)
+    if raw is None:
+        return default
+
+    try:
+        parsed = int(raw)
+        if parsed < min_value:
+            raise ValueError()
+        return parsed
+    except ValueError:
+        logger.warning(
+            f"Invalid {var_name}={raw!r}; using default {default}."
+        )
+        return default
+
+
+class AsyncRateLimiter:
+    """Simple async rate limiter that enforces a global minimum interval."""
+
+    def __init__(self, requests_per_minute: int):
+        self._interval_seconds = 60.0 / max(requests_per_minute, 1)
+        self._next_allowed_at = 0.0
+        self._lock = asyncio.Lock()
+
+    async def wait_for_slot(self) -> None:
+        async with self._lock:
+            now = time.monotonic()
+            wait_time = self._next_allowed_at - now
+            if wait_time > 0:
+                await asyncio.sleep(wait_time)
+            self._next_allowed_at = time.monotonic() + self._interval_seconds
+
+
+_RATE_LIMITERS: dict[int, AsyncRateLimiter] = {}
+
+
+def _get_rate_limiter(requests_per_minute: int) -> AsyncRateLimiter:
+    limiter = _RATE_LIMITERS.get(requests_per_minute)
+    if limiter is None:
+        limiter = AsyncRateLimiter(requests_per_minute)
+        _RATE_LIMITERS[requests_per_minute] = limiter
+    return limiter
 
 
 class BaseAuditAgent(ABC):
@@ -38,7 +88,13 @@ class BaseAuditAgent(ABC):
     agent_name: str = "base"
     system_prompt: str = ""
 
-    def __init__(self, model_name: str = "gpt-5.4-mini", temperature: float = 0.1):
+    def __init__(
+        self,
+        model_name: str = "gpt-5.4-mini",
+        temperature: float = 0.1,
+        rate_limit_rpm: int | None = None,
+        max_chunks_per_file: int | None = None,
+    ):
         """
         Initialize the agent with an LLM instance.
 
@@ -50,6 +106,17 @@ class BaseAuditAgent(ABC):
             model=model_name,
             temperature=temperature,
         )
+        self.rate_limit_rpm = (
+            rate_limit_rpm
+            if rate_limit_rpm is not None
+            else _read_int_env("OPENAI_RATE_LIMIT_RPM", DEFAULT_RATE_LIMIT_RPM, min_value=1)
+        )
+        self.max_chunks_per_file = (
+            max_chunks_per_file
+            if max_chunks_per_file is not None
+            else _read_int_env("MAX_CHUNKS_PER_FILE", DEFAULT_MAX_CHUNKS_PER_FILE, min_value=1)
+        )
+        self.rate_limiter = _get_rate_limiter(self.rate_limit_rpm)
 
     async def analyze_files(self, file_paths: list[str], repo_path: str) -> list[Finding]:
         """
@@ -92,6 +159,13 @@ class BaseAuditAgent(ABC):
         chunks = chunk_file(abs_path, max_tokens=3000, overlap_tokens=200)
         if not chunks:
             return []
+
+        if len(chunks) > self.max_chunks_per_file:
+            logger.info(
+                f"[{self.agent_name}] Limiting {rel_path} from {len(chunks)} chunks "
+                f"to {self.max_chunks_per_file} to reduce token usage"
+            )
+            chunks = chunks[:self.max_chunks_per_file]
 
         file_findings: list[Finding] = []
 
@@ -180,6 +254,7 @@ IMPORTANT: Respond with ONLY the JSON array, no markdown formatting, no explanat
         last_error = None
         for attempt in range(MAX_RETRIES):
             try:
+                await self.rate_limiter.wait_for_slot()
                 response = await self.llm.ainvoke(messages)
                 return response.content
             except Exception as e:

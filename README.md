@@ -296,6 +296,9 @@ Open `.env` and set your values:
 # Required
 OPENAI_API_KEY=sk-your-openai-api-key-here
 OPENAI_MODEL=gpt-5.4-mini
+OPENAI_RATE_LIMIT_RPM=20
+MAX_FILES_PER_AGENT=20
+MAX_CHUNKS_PER_FILE=2
 
 # Backend
 API_HOST=0.0.0.0
@@ -357,7 +360,10 @@ Start a new codebase audit.
   "branch": "main",
   "github_token": "ghp_xxx",
   "include_patterns": [],
-  "exclude_patterns": ["node_modules", ".git", "dist", "__pycache__"]
+  "exclude_patterns": ["node_modules", ".git", "dist", "__pycache__"],
+  "max_files_per_agent": 20,
+  "max_chunks_per_file": 2,
+  "rate_limit_rpm": 20
 }
 ```
 
@@ -368,6 +374,9 @@ Start a new codebase audit.
 | `github_token` | `string` | ❌ | `null` | GitHub PAT for private repos |
 | `include_patterns` | `string[]` | ❌ | `[]` | File patterns to include |
 | `exclude_patterns` | `string[]` | ❌ | *(see defaults)* | Patterns to exclude |
+| `max_files_per_agent` | `int` | ❌ | `20` | Hard cap of files scanned per agent |
+| `max_chunks_per_file` | `int` | ❌ | `2` | Maximum chunks analyzed per file |
+| `rate_limit_rpm` | `int` | ❌ | `20` | Global LLM request rate limit (requests/min) |
 
 **Response** `200 OK`:
 ```json
@@ -622,6 +631,9 @@ The **File Router** maps files to agents based on multiple criteria:
 |----------|----------|---------|-------------|
 | `OPENAI_API_KEY` | ✅ | — | OpenAI API key |
 | `OPENAI_MODEL` | ❌ | `gpt-5.4-mini` | Model to use for code analysis |
+| `OPENAI_RATE_LIMIT_RPM` | ❌ | `20` | Global LLM request throttle (requests/minute) |
+| `MAX_FILES_PER_AGENT` | ❌ | `20` | File scan cap per specialist agent |
+| `MAX_CHUNKS_PER_FILE` | ❌ | `2` | Chunk cap per file to control token spend |
 | `API_HOST` | ❌ | `0.0.0.0` | FastAPI bind host |
 | `API_PORT` | ❌ | `8000` | FastAPI bind port |
 | `JOB_STORAGE_PATH` | ❌ | `./storage/jobs` | Directory for cloned repos and reports |
