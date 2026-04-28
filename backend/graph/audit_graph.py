@@ -173,20 +173,28 @@ class AuditState(TypedDict):
 
 async def orchestrator_node(state: AuditState) -> dict:
     job_id = state["job_id"]
-    repo_url = state["repo_url"]
+    repo_url = state.get("repo_url")
     github_token = state.get("github_token")
     include_patterns = state.get("include_patterns", [])
     exclude_patterns = state.get("exclude_patterns", [])
     max_files_per_agent = state.get("max_files_per_agent") or DEFAULT_MAX_FILES_PER_AGENT
 
-    _update_job_status(job_id, status="cloning", current_step=f"Cloning {repo_url}...", progress_percent=5)
-
-    try:
-        storage_base = os.environ.get("JOB_STORAGE_PATH", "./storage/jobs")
-        repo_path = clone_repo(repo_url=repo_url, job_id=job_id, github_token=github_token, storage_base=storage_base)
-    except CloneError as e:
-        _update_job_status(job_id, status="failed", error=str(e), current_step="Clone failed")
-        return {"error": str(e), "status": "failed"}
+    if repo_url:
+        _update_job_status(job_id, status="cloning", current_step=f"Cloning {repo_url}...", progress_percent=5)
+        try:
+            storage_base = os.environ.get("JOB_STORAGE_PATH", "./storage/jobs")
+            repo_path = clone_repo(repo_url=repo_url, job_id=job_id, github_token=github_token, storage_base=storage_base)
+        except CloneError as e:
+            _update_job_status(job_id, status="failed", error=str(e), current_step="Clone failed")
+            return {"error": str(e), "status": "failed"}
+    else:
+        # It's a local folder audit, repo_path is already provided in state.
+        repo_path = state.get("repo_path")
+        if not repo_path or not os.path.isdir(repo_path):
+            error_msg = f"Invalid local directory: {repo_path}"
+            _update_job_status(job_id, status="failed", error=error_msg, current_step="Init failed")
+            return {"error": error_msg, "status": "failed"}
+        _update_job_status(job_id, status="routing", current_step=f"Scanning local directory {repo_path}...", progress_percent=5)
 
     _update_job_status(job_id, status="routing", current_step="Analyzing file structure...", progress_percent=15)
     file_map = route_files(
