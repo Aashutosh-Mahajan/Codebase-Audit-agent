@@ -72,10 +72,14 @@ def generate_pdf_report(
     os.makedirs(output_dir, exist_ok=True)
     pdf_path = os.path.join(output_dir, f"report_{job_id}.pdf")
 
-    HTML(string=full_html).write_pdf(pdf_path)
-
-    logger.info(f"PDF report generated: {pdf_path}")
-    return os.path.abspath(pdf_path)
+    try:
+        HTML(string=full_html).write_pdf(pdf_path)
+        logger.info(f"PDF report generated: {pdf_path}")
+        return os.path.abspath(pdf_path)
+    except Exception as e:
+        logger.error(f"PDF generation failed: {e}")
+        # Return empty string or handle it in the caller
+        return ""
 
 
 def _load_css() -> str:
