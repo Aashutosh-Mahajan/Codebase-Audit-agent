@@ -20,7 +20,7 @@ Since this CLI is written in Python, you can easily install it globally within y
 ### Option 1: One-Command Public Installation (Recommended)
 If the repository is public, you can install the CLI directly from GitHub using `pip` without needing to clone the source code manually:
 ```bash
-pip install git+https://github.com/your-org/codebase-audit-agent.git
+pip install git+https://github.com/Aashutosh-Mahajan/codebase-audit-agent.git
 ```
 
 ### Option 2: Manual Clone & Install
@@ -28,7 +28,7 @@ If you want to develop or modify the tool:
 
 **1. Clone the Repository**
 ```bash
-git clone https://github.com/your-org/codebase-audit-agent.git
+git clone https://github.com/Aashutosh-Mahajan/codebase-audit-agent.git
 cd codebase-audit-agent
 ```
 

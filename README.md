@@ -265,7 +265,7 @@ codebase-audit-agent/
 
 ```bash
 # 1. Clone the project
-git clone https://github.com/your-org/codebase-audit-agent.git
+git clone https://github.com/Aashutosh-Mahajan/codebase-audit-agent.git
 cd codebase-audit-agent
 
 # 2. Create a virtual environment
