@@ -55,13 +55,12 @@ def generate_pdf_report(
 <body>
     <header class="report-header">
         <div class="brand">🔍 Codebase Audit Agent System</div>
-        <div class="team">Neural Ninjas</div>
     </header>
     <main>
         {html_body}
     </main>
     <footer class="report-footer">
-        <span>Codebase Audit Agent System — Neural Ninjas</span>
+        <span>Codebase Audit Agent System</span>
         <span class="page-number"></span>
     </footer>
 </body>

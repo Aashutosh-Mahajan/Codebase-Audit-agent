@@ -1,6 +1,6 @@
 # 🔍 Codebase Audit Agent System — Project Plan
 
-> **Team:** Neural Ninjas  
+> **Team:**   
 > **Stack:** FastAPI · Streamlit · LangGraph · GPT-4.5  
 > **Goal:** A multi-agent AI pipeline that audits any GitHub repository, finds bugs and issues across the full stack, and generates a downloadable structured report in `.md` and `.pdf`.
 
@@ -384,7 +384,7 @@ Structure:
 
 - Convert Markdown → styled HTML using a custom CSS template
 - Render HTML → PDF using **WeasyPrint**
-- Styling: dark severity-colored section headers, monospace code blocks with syntax highlighting, color-coded severity badges, Neural Ninjas branding header/footer, page numbers
+- Styling: dark severity-colored section headers, monospace code blocks with syntax highlighting, color-coded severity badges,  branding header/footer, page numbers
 
 ---
 
@@ -599,4 +599,4 @@ OSV_API_BASE=https://api.osv.dev/v1
 
 ---
 
-*Plan authored for Neural Ninjas · Codebase Audit Agent System*
+*Plan authored for  · Codebase Audit Agent System*

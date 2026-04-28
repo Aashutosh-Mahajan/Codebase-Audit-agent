@@ -34,3 +34,6 @@ Thumbs.db
 
 # WeasyPrint cache
 .weasyprint-cache/
+.audit-agent
+plan.md
+
