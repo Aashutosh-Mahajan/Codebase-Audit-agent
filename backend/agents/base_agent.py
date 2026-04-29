@@ -205,7 +205,8 @@ class BaseAuditAgent(ABC):
         chunk_info: str = "",
     ) -> str:
         """Build the user prompt for the LLM with file context."""
-        return f"""Analyze the following code file for bugs, vulnerabilities, and issues in your domain of expertise.
+        return f"""Analyze the following code file for high-confidence bugs, vulnerabilities, and critical issues in your domain of expertise.
+DO NOT report theoretical risks or subjective best-practice deviations. Only report issues that are demonstrably exploitable or fundamentally broken.
 
 **File:** `{file_path}` {chunk_info}
 **Lines:** {start_line}–{end_line}
@@ -218,19 +219,19 @@ For each issue found, respond with a JSON array of objects. Each object MUST hav
 - "severity": one of "EXTREME", "HIGH", "MEDIUM", "LOW"
 - "title": short descriptive title (e.g., "SQL Injection in user_query()")
 - "bug_type": category (e.g., "Injection", "Memory Leak", "CORS Misconfiguration")
-- "what_is_it": plain-English description of the bug
+- "what_is_it": concise, plain-English description of the issue
 - "why_it_occurs": root cause explanation
-- "how_it_occurred": what code pattern caused it
+- "how_it_occurred": exact code pattern or execution flow that caused it
 - "line_start": starting line number (absolute, based on the line numbers shown)
 - "line_end": ending line number
-- "affected_code": the specific code snippet showing the issue
-- "recommended_fix": detailed instructions on how to fix it
+- "affected_code": the exact code snippet showing the issue
+- "recommended_fix": concrete, drop-in replacement code or exact steps to fix the issue
 - "references": array of relevant CWE IDs, OWASP references, or documentation links
 - "score": severity score from 0.0 to 100.0 based on exploitability (35%), impact (40%), and exposure (25%)
 
 If NO issues are found, respond with an empty JSON array: []
 
-IMPORTANT: Respond with ONLY the JSON array, no markdown formatting, no explanation outside the JSON."""
+IMPORTANT: Respond with ONLY the valid JSON array. Do not include markdown formatting like ```json, do not include any text or explanations outside the JSON."""
 
     async def _call_llm(self, system_prompt: str, user_prompt: str) -> str:
         """

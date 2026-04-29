@@ -17,17 +17,17 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 console = Console()
 
 LOGO = r"""
-   ██████╗  ██████╗ ██████╗ ███████╗██████╗  █████╗ ███████╗███████╗
-  ██╔════╝ ██╔═══██╗██╔══██╗██╔════╝██╔══██╗██╔══██╗██╔════╝██╔════╝
-  ██║      ██║   ██║██║  ██║█████╗  ██████╔╝███████║███████╗█████╗  
-  ██║      ██║   ██║██║  ██║██╔══╝  ██╔══██╗██╔══██║╚════██║██╔══╝  
-  ╚██████╗ ╚██████╔╝██████╔╝███████╗██████╔╝██║  ██║███████║███████╗
-   ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝
-                        AUDIT AGENT CLI
+███████╗██████╗ ███████╗ ██████╗████████╗██████╗  █████╗ 
+██╔════╝██╔══██╗██╔════╝██╔════╝╚══██╔══╝██╔══██╗██╔══██╗
+███████╗██████╔╝█████╗  ██║        ██║   ██████╔╝███████║
+╚════██║██╔═══╝ ██╔══╝  ██║        ██║   ██╔══██╗██╔══██║
+███████║██║     ███████╗╚██████╗   ██║   ██║  ██║██║  ██║
+╚══════╝╚═╝     ╚══════╝ ╚═════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝
+          MULTI-AGENT CODEBASE AUDIT SYSTEM
 """
 
 HELP_TEXT = """
-[bold cyan]Codebase Audit Agent CLI[/bold cyan] 🔍
+[bold cyan]SPECTRA CLI[/bold cyan] 🔍
 
 [bold]Description:[/bold]
 A multi-agent AI pipeline that audits any local codebase or GitHub repository, 
@@ -100,7 +100,7 @@ def setup_config(target_dir):
             f"A configuration file has been created at:\n[bold cyan]{env_file}[/bold cyan]\n\n"
             f"Please open this file and fill it out like this:\n\n"
             f"[green]{env_content}[/green]\n\n"
-            f"Once done, run the [bold green]audit-agent[/bold green] command again.",
+            f"Once done, run the [bold green]spectra[/bold green] command again.",
             title="Setup Paused"
         ))
         sys.exit(0)
@@ -143,7 +143,7 @@ async def run_audit(target_dir: str):
         "branch": "",
         "github_token": None,
         "include_patterns": [],
-        "exclude_patterns": ["node_modules", ".git", "dist", "__pycache__", "venv", ".venv", ".audit-agent"],
+        "exclude_patterns": ["node_modules", ".git", "dist", "__pycache__", "venv", ".venv", ".spectra"],
         "max_files_per_agent": int(os.environ.get("MAX_FILES_PER_AGENT", 20)),
         "max_chunks_per_file": int(os.environ.get("MAX_CHUNKS_PER_FILE", 2)),
         "rate_limit_rpm": int(os.environ.get("OPENAI_RATE_LIMIT_RPM", 20)),

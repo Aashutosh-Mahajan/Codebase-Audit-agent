@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
 </p>
 
-<h1 align="center">🔍 Codebase Audit Agent System</h1>
+<h1 align="center">🔍 SPECTRA</h1>
 
 <p align="center">
   <strong>A comprehensive multi-agent AI pipeline designed to audit local codebases and GitHub repositories, detect full-stack vulnerabilities and bugs, and generate professional PDF & Markdown reports.</strong>
@@ -36,7 +36,7 @@
 
 ## 🌐 Overview
 
-The **Codebase Audit Agent System** provides an intelligent, automated pipeline for code analysis. You can provide it with a local directory path or a remote GitHub repository URL. The system orchestrates **6 specialized AI agents**—each focused on a different technology stack layer—to analyze your code in parallel.
+The **SPECTRA** system provides an intelligent, automated pipeline for code analysis. You can provide it with a local directory path or a remote GitHub repository URL. The system orchestrates **6 specialized AI agents**—each focused on a different technology stack layer—to analyze your code in parallel.
 
 Powered by OpenAI models (like `gpt-4o-mini`, `gpt-4o`, or `gpt-5.4-mini`), the system detects vulnerabilities, bugs, code-smells, and architectural issues. After scanning, an **Aggregator Agent** combines the findings, deduplicates them, and scores them by severity. A final **Report Writer** generates clean, professional audit reports in both `.md` and `.pdf` formats directly in your project folder.
 
@@ -116,26 +116,26 @@ pip install -e .
 
 ## 🎮 How to Use the CLI
 
-Once installed, the `audit-agent` command will be available in your terminal.
+Once installed, the `spectra` command will be available in your terminal.
 
 ```bash
 # To view the help menu:
-audit-agent -help
+spectra -help
 
 # To audit the current directory you are in:
-audit-agent
+spectra
 
 # To audit a specific directory path:
-audit-agent -d /path/to/your/project
+spectra -d /path/to/your/project
 ```
 
 ### Configuration Flow
 
-When you run `audit-agent` for the **first time** in a new project:
-1. The CLI creates a hidden `.audit-agent` folder in that project.
+When you run `spectra` for the **first time** in a new project:
+1. The CLI creates a hidden `.spectra` folder in that project.
 2. It generates a template `.env` file inside that folder.
-3. The CLI pauses and asks you to open `.audit-agent/.env` to provide your **OpenAI API Key** and select your **Model** (e.g., `gpt-4o-mini`).
-4. Once you save the file, simply run `audit-agent` again.
+3. The CLI pauses and asks you to open `.spectra/.env` to provide your **OpenAI API Key** and select your **Model** (e.g., `gpt-4o-mini`).
+4. Once you save the file, simply run `spectra` again.
 
 The configuration is saved securely to that specific project, meaning future runs require zero setup!
 
@@ -143,7 +143,7 @@ The configuration is saved securely to that specific project, meaning future run
 
 ## 📊 Generated Reports
 
-When the audit completes, the CLI will save the results in the `.audit-agent/reports` directory of your audited project. 
+When the audit completes, the CLI will save the results in the `.spectra/reports` directory of your audited project. 
 
 The output includes:
 1. **`report_<job_id>.md`**: A GitHub-flavored markdown file perfect for viewing in your code editor or uploading to a repository wiki.
@@ -195,7 +195,7 @@ If you see an error like `cannot load library 'libgobject-2.0-0'` during PDF gen
 4. Restart your terminal and try again.
 
 ### API Rate Limits
-If you encounter `429 Too Many Requests` from OpenAI, edit your `.audit-agent/.env` file and lower the `OPENAI_RATE_LIMIT_RPM` variable (default is 20) or ensure your OpenAI account has sufficient credits/tier level.
+If you encounter `429 Too Many Requests` from OpenAI, edit your `.spectra/.env` file and lower the `OPENAI_RATE_LIMIT_RPM` variable (default is 20) or ensure your OpenAI account has sufficient credits/tier level.
 
 ---
 
@@ -212,5 +212,5 @@ Please ensure your code follows standard Python PEP-8 styling and uses proper ty
 
 ---
 <p align="center">
-  <em>Codebase Audit Agent System — Automated, thorough, and professional code auditing.</em>
+  <em>SPECTRA — Automated, thorough, and professional code auditing.</em>
 </p>

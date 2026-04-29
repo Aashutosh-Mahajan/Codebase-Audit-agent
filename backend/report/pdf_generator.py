@@ -1,13 +1,14 @@
 """
-PDF Report Generator — converts Markdown reports to styled PDFs using WeasyPrint.
+PDF Report Generator — converts Markdown reports to styled PDFs using xhtml2pdf.
 """
 
 import os
 import logging
+from io import BytesIO
 
 import markdown
 from pygments.formatters import HtmlFormatter
-from weasyprint import HTML
+from xhtml2pdf import pisa
 
 logger = logging.getLogger(__name__)
 
@@ -41,28 +42,27 @@ def generate_pdf_report(
     # Pygments syntax highlighting CSS
     pygments_css = HtmlFormatter(style="monokai").get_style_defs(".codehilite")
 
-    # Build full HTML document
+    # Build full HTML document for xhtml2pdf
     full_html = f"""<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="utf-8">
-    <title>Codebase Audit Report — {job_id[:8]}</title>
+    <title>SPECTRA Audit Report — {job_id[:8]}</title>
     <style>
         {css_content}
         {pygments_css}
     </style>
 </head>
 <body>
-    <header class="report-header">
-        <div class="brand">🔍 Codebase Audit Agent System</div>
-    </header>
+    <div id="header">
+        <div class="brand">🔍 SPECTRA</div>
+    </div>
+    <div id="footer">
+        SPECTRA | Page <pdf:pagenumber> of <pdf:pagecount>
+    </div>
     <main>
         {html_body}
     </main>
-    <footer class="report-footer">
-        <span>Codebase Audit Agent System</span>
-        <span class="page-number"></span>
-    </footer>
 </body>
 </html>"""
 
@@ -72,12 +72,17 @@ def generate_pdf_report(
     pdf_path = os.path.join(output_dir, f"report_{job_id}.pdf")
 
     try:
-        HTML(string=full_html).write_pdf(pdf_path)
+        with open(pdf_path, "w+b") as result_file:
+            pisa_status = pisa.CreatePDF(full_html, dest=result_file)
+            
+        if pisa_status.err:
+            logger.error("PDF generation failed with pisa errors.")
+            return ""
+            
         logger.info(f"PDF report generated: {pdf_path}")
         return os.path.abspath(pdf_path)
     except Exception as e:
         logger.error(f"PDF generation failed: {e}")
-        # Return empty string or handle it in the caller
         return ""
 
 
@@ -95,41 +100,63 @@ def _get_default_css() -> str:
     """Default CSS styling for the PDF report."""
     return """
 @page {
-    size: A4;
-    margin: 2cm 1.5cm;
-    @bottom-center {
-        content: "Page " counter(page) " of " counter(pages);
-        font-size: 9pt;
-        color: #6b7280;
+    size: a4;
+    margin: 2cm;
+    @frame header_frame {
+        -pdf-frame-content: header;
+        margin-top: 1cm;
+        margin-left: 2cm;
+        margin-right: 2cm;
+        height: 1cm;
+    }
+    @frame footer_frame {
+        -pdf-frame-content: footer;
+        margin-bottom: 1cm;
+        margin-left: 2cm;
+        margin-right: 2cm;
+        height: 1cm;
     }
 }
 
 body {
-    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    font-family: Helvetica, Arial, sans-serif;
     font-size: 11pt;
-    line-height: 1.6;
-    color: #1f2937;
+    line-height: 1.5;
+    color: #333333;
 }
 
-h1 { font-size: 22pt; color: #111827; border-bottom: 3px solid #3b82f6; padding-bottom: 8px; }
-h2 { font-size: 16pt; color: #1e40af; margin-top: 24px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
-h3 { font-size: 13pt; color: #374151; margin-top: 18px; }
-h4 { font-size: 11pt; color: #4b5563; margin-top: 14px; }
+#header {
+    text-align: center;
+    border-bottom: 1px solid #3b82f6;
+    padding-bottom: 10px;
+}
+.brand {
+    font-size: 16pt;
+    font-weight: bold;
+    color: #1e40af;
+}
 
-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10pt; }
-th { background: #1e293b; color: white; padding: 8px 10px; text-align: left; font-weight: 600; }
-td { padding: 6px 10px; border-bottom: 1px solid #e5e7eb; }
-tr:nth-child(even) { background: #f9fafb; }
+#footer {
+    text-align: center;
+    font-size: 9pt;
+    color: #666666;
+    border-top: 1px solid #cccccc;
+    padding-top: 5px;
+}
 
-code { background: #f3f4f6; padding: 2px 5px; border-radius: 3px; font-family: 'Consolas', 'Courier New', monospace; font-size: 9.5pt; }
-pre { background: #1e293b; color: #e2e8f0; padding: 14px; border-radius: 6px; overflow-x: auto; font-size: 9pt; line-height: 1.5; }
-pre code { background: none; color: inherit; padding: 0; }
+h1 { font-size: 20pt; color: #111827; border-bottom: 2px solid #3b82f6; padding-bottom: 5px; }
+h2 { font-size: 15pt; color: #1e40af; margin-top: 15px; border-bottom: 1px solid #e5e7eb; padding-bottom: 3px; }
+h3 { font-size: 12pt; color: #374151; margin-top: 12px; }
+h4 { font-size: 11pt; color: #4b5563; margin-top: 10px; }
 
-blockquote { border-left: 4px solid #3b82f6; margin: 12px 0; padding: 8px 16px; background: #eff6ff; color: #1e40af; }
+table { width: 100%; border: 1px solid #cccccc; margin: 10px 0; font-size: 10pt; }
+th { background-color: #1e293b; color: #ffffff; padding: 6px; text-align: left; font-weight: bold; }
+td { padding: 5px; border-bottom: 1px solid #e5e7eb; }
 
-.report-header { text-align: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #3b82f6; }
-.report-header .brand { font-size: 18pt; font-weight: 700; color: #1e40af; }
-.report-header .team { font-size: 11pt; color: #6b7280; margin-top: 4px; }
+code { background-color: #f3f4f6; font-family: Courier, monospace; font-size: 9pt; }
+pre { background-color: #1e293b; color: #e2e8f0; padding: 10px; font-size: 9pt; }
+pre code { background-color: transparent; }
 
-hr { border: none; border-top: 1px solid #e5e7eb; margin: 20px 0; }
+blockquote { border-left: 3px solid #3b82f6; margin: 10px 0; padding: 5px 10px; background-color: #eff6ff; color: #1e40af; }
+hr { border: none; border-top: 1px solid #e5e7eb; margin: 15px 0; }
 """

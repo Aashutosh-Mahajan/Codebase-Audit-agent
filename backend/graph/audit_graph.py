@@ -159,6 +159,7 @@ class AuditState(TypedDict):
     file_map: dict[str, list[str]]
     agent_findings: Annotated[dict[str, list], _merge_findings]
     aggregated_findings: list
+    orchestrator_summary: dict
     report_md: str
     report_pdf_path: str
     status: str
@@ -332,10 +333,22 @@ async def report_writer_node(state: AuditState) -> dict:
     if state.get("error"):
         return {}
 
-    _update_job_status(job_id, status="reporting", current_step="Generating audit report...", progress_percent=85)
+    _update_job_status(job_id, status="reporting", current_step="Synthesizing executive summary...", progress_percent=85)
 
     findings = state.get("aggregated_findings", [])
-    report_md = generate_markdown_report(findings=findings, repo_url=repo_url, branch=branch)
+
+    from backend.agents.orchestrator_agent import OrchestratorAgent
+    orchestrator = OrchestratorAgent()
+    orchestrator_summary = await orchestrator.synthesize(findings)
+
+    _update_job_status(job_id, current_step="Generating audit report...", progress_percent=90)
+
+    report_md = generate_markdown_report(
+        findings=findings, 
+        repo_url=repo_url, 
+        branch=branch,
+        orchestrator_summary=orchestrator_summary
+    )
 
     storage_base = os.environ.get("JOB_STORAGE_PATH", "./storage/jobs")
     report_dir = os.path.join(storage_base, job_id)
@@ -368,7 +381,12 @@ async def report_writer_node(state: AuditState) -> dict:
         report_md_ready=True, report_pdf_ready=pdf_ready,
     )
 
-    return {"report_md": report_md, "report_pdf_path": pdf_path, "status": "done"}
+    return {
+        "orchestrator_summary": orchestrator_summary,
+        "report_md": report_md, 
+        "report_pdf_path": pdf_path, 
+        "status": "done"
+    }
 
 
 # ─────────────────────────────────────────────

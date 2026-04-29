@@ -72,7 +72,7 @@ async def run_audit_pipeline(job_id: str, request: AuditRequest) -> None:
 @router.post("/audit", response_model=AuditResponse)
 async def start_audit(request: AuditRequest, background_tasks: BackgroundTasks):
     """
-    Start a new codebase audit.
+    Start a new SPECTRA audit.
 
     Accepts a GitHub repository URL, creates a job, and launches the
     audit pipeline as a background task.

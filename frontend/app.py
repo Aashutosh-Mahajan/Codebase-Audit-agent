@@ -22,7 +22,7 @@ FASTAPI_BASE_URL = os.environ.get("FASTAPI_BASE_URL", "http://localhost:8000")
 # Page Config
 # ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="Codebase Audit Agent",
+    page_title="SPECTRA",
     page_icon="🔍",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -203,7 +203,7 @@ def get_status(job_id):
 # SCREEN 1: Input
 # ─────────────────────────────────────────────
 def render_input_screen():
-    st.markdown('<div class="main-header"><h1>🔍 Codebase Audit Agent</h1><p>AI-powered multi-agent code auditing system</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header"><h1>🔍 SPECTRA</h1><p>AI-powered multi-agent code auditing system</p></div>', unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:

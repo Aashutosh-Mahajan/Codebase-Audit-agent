@@ -31,15 +31,15 @@ async def lifespan(app: FastAPI):
     storage_path = os.environ.get("JOB_STORAGE_PATH", "./storage/jobs")
     os.makedirs(storage_path, exist_ok=True)
     logger.info(f"Storage directory ready: {storage_path}")
-    logger.info("Codebase Audit Agent System — Backend started")
+    logger.info("SPECTRA — Backend started")
     yield
     # Shutdown
-    logger.info("Codebase Audit Agent System — Backend shutting down")
+    logger.info("SPECTRA — Backend shutting down")
 
 
 # Create FastAPI app
 app = FastAPI(
-    title="Codebase Audit Agent System",
+    title="SPECTRA",
     description="Multi-agent AI pipeline that audits GitHub repositories and generates structured reports",
     version="1.0.0",
     lifespan=lifespan,
@@ -64,6 +64,6 @@ async def health_check():
     """Health check endpoint."""
     return {
         "status": "healthy",
-        "service": "Codebase Audit Agent System",
+        "service": "SPECTRA",
         "version": "1.0.0",
     }
