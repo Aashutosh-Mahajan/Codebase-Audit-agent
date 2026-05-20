@@ -228,7 +228,7 @@ def render_input_screen():
 
         exclude_patterns = st.text_area(
             "Exclude patterns (comma-separated)",
-            value="node_modules, .git, dist, __pycache__, .venv, venv, .spectra, .audit-agent, .env, .env.*, *.env",
+            value="node_modules, .git, dist, __pycache__, .venv, venv, .spectra, .env, .env.*, *.env",
             help="Directories and files to skip during audit",
             height=80,
         )

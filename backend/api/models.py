@@ -20,7 +20,7 @@ class AuditRequest(BaseModel):
     exclude_patterns: list[str] = Field(
         default_factory=lambda: [
             "node_modules", ".git", "dist", "__pycache__", ".venv", "venv",
-            ".spectra", ".audit-agent", ".env", ".env.*", "*.env",
+            ".spectra", ".env", ".env.*", "*.env",
         ],
         description="File/directory patterns to exclude"
     )

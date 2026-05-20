@@ -32,7 +32,7 @@ LOGO = r"""
 """
 
 HELP_TEXT = """
-[bold cyan]SPECTRA CLI[/bold cyan] 🔍
+[bold cyan]SPECTRA CLI[/bold cyan]
 
 [bold]Description:[/bold]
 A multi-agent AI pipeline that audits any local codebase or GitHub repository, 
@@ -61,7 +61,7 @@ LEGACY_CONFIG_DIR_NAME = ".audit-agent"
 
 
 def migrate_legacy_config(target_dir: str) -> None:
-    """Move legacy .audit-agent config into .spectra so all state lives together."""
+    """Move legacy .audit-agent config into .spectra and remove the old folder."""
     config_dir = os.path.join(target_dir, CONFIG_DIR_NAME)
     legacy_dir = os.path.join(target_dir, LEGACY_CONFIG_DIR_NAME)
 
@@ -76,22 +76,25 @@ def migrate_legacy_config(target_dir: str) -> None:
         )
         return
 
+    skipped_items = []
     for item_name in os.listdir(legacy_dir):
         legacy_item = os.path.join(legacy_dir, item_name)
         config_item = os.path.join(config_dir, item_name)
         if os.path.exists(config_item):
+            skipped_items.append(item_name)
             continue
         shutil.move(legacy_item, config_item)
         console.print(f"[yellow]Moved legacy item into[/yellow] [bold]{config_item}[/bold]")
 
-    try:
-        if not os.listdir(legacy_dir):
-            os.rmdir(legacy_dir)
-    except OSError:
+    if skipped_items:
         console.print(
-            f"[yellow]Legacy folder still exists because it contains extra files:[/yellow] "
-            f"[bold]{legacy_dir}[/bold]"
+            "[yellow]Skipped duplicate legacy item(s) already present in .spectra:[/yellow] "
+            + ", ".join(skipped_items)
         )
+
+    shutil.rmtree(legacy_dir, ignore_errors=True)
+    if os.path.exists(legacy_dir):
+        console.print(f"[yellow]Could not remove legacy folder:[/yellow] [bold]{legacy_dir}[/bold]")
 
 def show_intro():
     console.clear()
@@ -139,10 +142,10 @@ def setup_config(target_dir):
             f.write("# - gpt-5.4-mini (Latest / Future-proof)\n")
             f.write("OPENAI_MODEL=gpt-4o-mini\n")
             
-        console.print(f"[green]✔ Created configuration directory at[/green] [bold]{config_dir}[/bold]\n")
+        console.print(f"[green]Created configuration directory at[/green] [bold]{config_dir}[/bold]\n")
         needs_user_edit = True
     else:
-        console.print(f"[green]✔ Configuration directory found at[/green] [bold]{config_dir}[/bold]\n")
+        console.print(f"[green]Configuration directory found at[/green] [bold]{config_dir}[/bold]\n")
         # Load existing env vars
         load_dotenv(env_file)
         api_key = os.getenv("OPENAI_API_KEY")
@@ -201,7 +204,7 @@ async def run_audit(target_dir: str):
         "include_patterns": [],
         "exclude_patterns": [
             "node_modules", ".git", "dist", "__pycache__", "venv", ".venv",
-            ".spectra", ".audit-agent", ".env", ".env.*", "*.env",
+            ".spectra", ".env", ".env.*", "*.env",
         ],
         "max_files_per_agent": int(os.environ.get("MAX_FILES_PER_AGENT", 20)),
         "max_chunks_per_file": int(os.environ.get("MAX_CHUNKS_PER_FILE", 2)),
@@ -250,7 +253,7 @@ async def run_audit(target_dir: str):
                 console.print(f"\n[red]Error during audit:[/red] {result['error']}")
                 sys.exit(1)
             
-            console.print("\n[bold green]✅ Audit Complete![/bold green]")
+            console.print("\n[bold green]Audit Complete![/bold green]")
             counts = status.get("finding_counts", {})
             total = status.get("total_findings", 0)
             
@@ -259,10 +262,10 @@ async def run_audit(target_dir: str):
             summary_table.add_column("Level", justify="right")
             summary_table.add_column("Count", justify="left")
             
-            summary_table.add_row("🔴 [red]EXTREME[/red]", str(counts.get('EXTREME', 0)))
-            summary_table.add_row("🟠 [dark_orange]HIGH[/dark_orange]", str(counts.get('HIGH', 0)))
-            summary_table.add_row("🟡 [yellow]MEDIUM[/yellow]", str(counts.get('MEDIUM', 0)))
-            summary_table.add_row("🔵 [blue]LOW[/blue]", str(counts.get('LOW', 0)))
+            summary_table.add_row("[red]EXTREME[/red]", str(counts.get('EXTREME', 0)))
+            summary_table.add_row("[dark_orange]HIGH[/dark_orange]", str(counts.get('HIGH', 0)))
+            summary_table.add_row("[yellow]MEDIUM[/yellow]", str(counts.get('MEDIUM', 0)))
+            summary_table.add_row("[blue]LOW[/blue]", str(counts.get('LOW', 0)))
             summary_table.add_row("", "")
             summary_table.add_row("[bold]TOTAL[/bold]", f"[bold]{total}[/bold]")
             
@@ -278,9 +281,9 @@ async def run_audit(target_dir: str):
 
             # Report Links formatted cleanly
             if md_path and os.path.exists(md_path):
-                console.print(f"\n📄 [bold cyan]Markdown Report:[/bold cyan]\n   [link=file://{os.path.abspath(md_path)}]{os.path.abspath(md_path)}[/link]")
+                console.print(f"\n[bold cyan]Markdown Report:[/bold cyan]\n   [link=file://{os.path.abspath(md_path)}]{os.path.abspath(md_path)}[/link]")
             if pdf_path and os.path.exists(pdf_path):
-                console.print(f"\n📕 [bold red]PDF Report:[/bold red]\n   [link=file://{os.path.abspath(pdf_path)}]{os.path.abspath(pdf_path)}[/link]")
+                console.print(f"\n[bold red]PDF Report:[/bold red]\n   [link=file://{os.path.abspath(pdf_path)}]{os.path.abspath(pdf_path)}[/link]")
             console.print("\n")
                 
         except Exception as e:
@@ -301,7 +304,7 @@ def main(dir, help):
     show_intro()
     
     target_dir = os.path.abspath(dir)
-    console.print(f"🎯 [bold]Target Directory:[/bold] {target_dir}\n")
+    console.print(f"[bold]Target Directory:[/bold] {target_dir}\n")
 
     # Run the async loop
     asyncio.run(run_audit(target_dir))

@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="codebase-audit-agent",
+    name="spectra",
     version="1.0.0",
     packages=find_packages(),
     py_modules=["cli"],
@@ -29,7 +29,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "audit-agent=cli:main",
+            "spectra=cli:main",
         ],
     },
 )
