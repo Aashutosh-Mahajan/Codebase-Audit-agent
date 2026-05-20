@@ -7,10 +7,11 @@ import time
 import logging
 from dotenv import load_dotenv, set_key
 from rich.align import Align
-from rich.console import Console
+from rich.console import Console, Group
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
 from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 
 # Suppress debug logs from other libraries
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -47,9 +48,41 @@ CONFIG_DIR_NAME = ".spectra"
 
 def show_intro():
     console.clear()
-    console.print("[bold cyan]SPECTRA[/bold cyan] [dim]codebase audit[/dim]")
-    console.print("[dim]Security, dependency, architecture, and report generation.[/dim]")
-    console.print()
+    
+    letters = ["S", "P", "E", "C", "T", "R", "A"]
+    # Aesthetic modern gradient (Cyan to Deep Blue/Purple)
+    colors = ["#00f2fe", "#00dcf9", "#00c6f4", "#00b0ef", "#009aea", "#0084e5", "#006ee0"]
+    
+    logo = Text()
+    logo.justify = "center"
+    
+    # Clean Reveal Animation
+    for i in range(len(letters)):
+        sys.stdout.write("\033[H\033[J")
+        sys.stdout.flush()
+        logo.append(f" {letters[i]} ", style=f"bold {colors[i]}")
+        
+        panel = Panel(
+            logo,
+            border_style=colors[i],
+            padding=(1, 4),
+            expand=False
+        )
+        console.print(Align.center(panel))
+        time.sleep(0.08)
+
+    sys.stdout.write("\033[H\033[J")
+    sys.stdout.flush()
+    subtitle = Text("MULTI-AGENT CODEBASE AUDIT SYSTEM", style="dim #A0AEC0", justify="center")
+    group = Group(logo, Text(""), subtitle)
+    panel = Panel(
+        group,
+        border_style="#009aea",
+        padding=(1, 6),
+        expand=False
+    )
+    console.print(Align.center(panel))
+    console.print("\n")
 
 def setup_config(target_dir):
     config_dir = os.path.join(target_dir, CONFIG_DIR_NAME)
@@ -72,12 +105,10 @@ def setup_config(target_dir):
             f.write("# - gpt-5.4-mini (Latest / Future-proof)\n")
             f.write("OPENAI_MODEL=gpt-4o-mini\n")
             
-        console.print("[green]created[/green]  workspace")
-        console.print(f"         [cyan]{config_dir}[/cyan]\n")
+        console.print(f"[green]OK[/green]  Created workspace at [bold]{config_dir}[/bold]")
         needs_user_edit = True
     else:
-        console.print("[green]using[/green]    workspace")
-        console.print(f"         [cyan]{config_dir}[/cyan]\n")
+        console.print(f"[green]OK[/green]  Workspace found at [bold]{config_dir}[/bold]")
         # Load existing env vars
         load_dotenv(env_file)
         api_key = os.getenv("OPENAI_API_KEY")
@@ -85,16 +116,16 @@ def setup_config(target_dir):
             needs_user_edit = True
 
     if needs_user_edit:
-        console.print("[bold yellow]setup required[/bold yellow]")
-        console.print("Add your OpenAI key before running the audit.\n")
-
-        console.print("  [dim]config[/dim]  " + f"[cyan]{env_file}[/cyan]")
-        console.print("  [dim]set[/dim]     [green]OPENAI_API_KEY=sk-your-openai-api-key[/green]")
-        console.print("  [dim]model[/dim]   [green]OPENAI_MODEL=gpt-4o-mini[/green]")
         console.print()
-        console.print("[bold]next[/bold]")
-        console.print("  1. Edit the config file above")
-        console.print("  2. Run [cyan]spectra[/cyan] again")
+        console.print("[bold yellow]Setup required[/bold yellow]")
+        console.print("Add your OpenAI key before running the audit.")
+
+        console.print()
+        console.print(f"  [cyan]config[/cyan]  {env_file}")
+        console.print("  [cyan]key[/cyan]     OPENAI_API_KEY=sk-your-openai-api-key")
+        console.print("  [cyan]model[/cyan]   OPENAI_MODEL=gpt-4o-mini")
+        console.print()
+        console.print("[dim]Next: edit the config file, then run[/dim] [bold cyan]spectra[/bold cyan] [dim]again.[/dim]")
         sys.exit(0)
 
     # Force update current process env so the backend picks it up directly
@@ -237,7 +268,7 @@ def main(dir, help):
     show_intro()
     
     target_dir = os.path.abspath(dir)
-    console.print(f"[dim]project[/dim]  [cyan]{target_dir}[/cyan]\n")
+    console.print(f"[magenta]Target Directory:[/magenta] [bold]{target_dir}[/bold]")
 
     # Run the async loop
     asyncio.run(run_audit(target_dir))

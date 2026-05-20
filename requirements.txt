@@ -1,6 +1,4 @@
 # Core
-fastapi>=0.115.0
-uvicorn[standard]>=0.34.0
 python-dotenv>=1.1.0
 pydantic>=2.10.0
 
@@ -16,10 +14,6 @@ gitpython>=3.1.44
 markdown>=3.7
 xhtml2pdf>=0.2.17
 pygments>=2.19.0
-
-# Frontend
-streamlit>=1.42.0
-requests>=2.32.0
 
 # Utilities
 tiktoken>=0.9.0

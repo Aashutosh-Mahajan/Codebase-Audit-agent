@@ -52,7 +52,6 @@ Powered by OpenAI models (like `gpt-4o-mini`, `gpt-4o`, or `gpt-5.4-mini`), the 
 | 🎯 **Weighted Severity Scoring** | Findings are scored on Exploitability (35%), Impact (40%), and Exposure (25%). |
 | 📊 **Professional Reports** | Beautifully formatted `.md` and `.pdf` reports with code snippets, severity breakdowns, and remediation steps. |
 | 💻 **Interactive CLI** | User-friendly command-line interface with real-time progress tracking, animations, and zero-configuration setups. |
-| 🐳 **Docker Ready** | Easily deploy the underlying FastAPI and Streamlit interfaces using Docker Compose. |
 | 🔑 **Private Repo Support** | Pass GitHub PAT tokens to audit private repositories effortlessly. |
 
 ---
@@ -151,61 +150,12 @@ The output includes:
 
 ---
 
-## 📡 API Reference
-
-If you prefer to use the system as a backend service rather than a CLI, it exposes a full **FastAPI** application.
-
-**Start the backend server:**
-```bash
-uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### Key Endpoints
-
-- `POST /audit`: Start a new codebase audit job (pass a GitHub `repo_url`, optional `github_token`, and `branch`). Returns a `job_id`.
-- `GET /audit/{job_id}/status`: Poll for live status, progress percentages, and current agent states.
-- `GET /report/{job_id}/download`: Download the generated report (pass `?format=md` or `?format=pdf`).
-
-*(Refer to the Swagger UI at `http://localhost:8000/docs` for full request/response schemas).*
-
----
-
-## 🐳 Docker Deployment
-
-The project includes Docker support to run the FastAPI backend and Streamlit UI as isolated containers.
-
-```bash
-# Build and start the services
-docker-compose up --build
-```
-- **Backend API**: `http://localhost:8000`
-- **Streamlit Frontend**: `http://localhost:8501`
-
----
-
 ## 🔧 Troubleshooting
 
-### API Rate Limits
-If you encounter `429 Too Many Requests` from OpenAI, edit your `.spectra/.env` file and lower the `OPENAI_RATE_LIMIT_RPM` variable (default is 20) or ensure your OpenAI account has sufficient credits/tier level.
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome!
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature/amazing-feature`).
-3. Commit your changes (`git commit -m 'Add amazing feature'`).
-4. Push to the branch (`git push origin feature/amazing-feature`).
-5. Open a Pull Request.
-
-Please ensure your code follows standard Python PEP-8 styling and uses proper type hints.
-
----
-<p align="center">
-  <em>SPECTRA — Automated, thorough, and professional code auditing.</em>
-</p>
-GTK-for-Windows-Runtime-Environment-Installer/releases).
+### Missing GTK / WeasyPrint Errors
+If you see errors related to `cairo`, `pango`, or `gobject` when generating the PDF report:
+**Windows:**
+1. Download the GTK3 installer (e.g., from github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases).
 2. Install the latest `.exe` release.
 3. **Important**: Check the box **"Add GTK+ to your PATH"** during installation.
 4. Restart your terminal and try again.
