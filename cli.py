@@ -5,7 +5,6 @@ import uuid
 import click
 import time
 import logging
-import shutil
 from dotenv import load_dotenv, set_key
 from rich.align import Align
 from rich.console import Console
@@ -22,12 +21,11 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 console = Console()
 
 LOGO = r"""
-███████╗██████╗ ███████╗ ██████╗████████╗██████╗  █████╗ 
-██╔════╝██╔══██╗██╔════╝██╔════╝╚══██╔══╝██╔══██╗██╔══██╗
-███████╗██████╔╝█████╗  ██║        ██║   ██████╔╝███████║
-╚════██║██╔═══╝ ██╔══╝  ██║        ██║   ██╔══██╗██╔══██║
-███████║██║     ███████╗╚██████╗   ██║   ██║  ██║██║  ██║
-╚══════╝╚═╝     ╚══════╝ ╚═════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝
+  SSSSS  PPPPP   EEEEE   CCCC  TTTTT  RRRR    AAA
+  S      P    P  E      C        T    R   R  A   A
+  SSSSS  PPPPP   EEEE   C        T    RRRR   AAAAA
+      S  P       E      C        T    R  R   A   A
+  SSSSS  P       EEEEE   CCCC    T    R   R  A   A
           MULTI-AGENT CODEBASE AUDIT SYSTEM
 """
 
@@ -57,44 +55,6 @@ will be provided at the end of the run.
 """
 
 CONFIG_DIR_NAME = ".spectra"
-LEGACY_CONFIG_DIR_NAME = ".audit-agent"
-
-
-def migrate_legacy_config(target_dir: str) -> None:
-    """Move legacy .audit-agent config into .spectra and remove the old folder."""
-    config_dir = os.path.join(target_dir, CONFIG_DIR_NAME)
-    legacy_dir = os.path.join(target_dir, LEGACY_CONFIG_DIR_NAME)
-
-    if not os.path.isdir(legacy_dir):
-        return
-
-    if not os.path.exists(config_dir):
-        shutil.move(legacy_dir, config_dir)
-        console.print(
-            f"[yellow]Moved legacy configuration from[/yellow] "
-            f"[bold]{legacy_dir}[/bold] [yellow]to[/yellow] [bold]{config_dir}[/bold]"
-        )
-        return
-
-    skipped_items = []
-    for item_name in os.listdir(legacy_dir):
-        legacy_item = os.path.join(legacy_dir, item_name)
-        config_item = os.path.join(config_dir, item_name)
-        if os.path.exists(config_item):
-            skipped_items.append(item_name)
-            continue
-        shutil.move(legacy_item, config_item)
-        console.print(f"[yellow]Moved legacy item into[/yellow] [bold]{config_item}[/bold]")
-
-    if skipped_items:
-        console.print(
-            "[yellow]Skipped duplicate legacy item(s) already present in .spectra:[/yellow] "
-            + ", ".join(skipped_items)
-        )
-
-    shutil.rmtree(legacy_dir, ignore_errors=True)
-    if os.path.exists(legacy_dir):
-        console.print(f"[yellow]Could not remove legacy folder:[/yellow] [bold]{legacy_dir}[/bold]")
 
 def show_intro():
     console.clear()
@@ -120,8 +80,6 @@ def show_intro():
     console.print("\n")
 
 def setup_config(target_dir):
-    migrate_legacy_config(target_dir)
-
     config_dir = os.path.join(target_dir, CONFIG_DIR_NAME)
     env_file = os.path.join(config_dir, ".env")
 

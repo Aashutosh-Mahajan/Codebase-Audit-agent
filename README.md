@@ -101,7 +101,7 @@ If you wish to modify the code or contribute:
 ```bash
 # 1. Clone the repository
 git clone https://github.com/Aashutosh-Mahajan/Spectra.git
-cd codebase-audit-agent
+cd spectra
 
 # 2. Create and activate a virtual environment
 python -m venv venv

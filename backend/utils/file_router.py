@@ -95,7 +95,6 @@ ENV_PATTERNS = [".env", ".env.*", "*.env", ".env.local", ".env.production"]
 # secrets that should never be audited as project source.
 PROTECTED_EXCLUDES = [
     ".spectra",
-    ".audit-agent",
     ".env",
     ".env.*",
     "*.env",
@@ -106,7 +105,7 @@ DEFAULT_EXCLUDES = [
     "node_modules", ".git", "dist", "build", "__pycache__",
     ".venv", "venv", ".env", ".env.*", "*.env", ".tox", ".pytest_cache",
     ".mypy_cache", "*.min.js", "*.min.css", "*.map",
-    ".next", ".nuxt", "coverage", ".nyc_output", ".spectra", ".audit-agent",
+    ".next", ".nuxt", "coverage", ".nyc_output", ".spectra",
 ]
 
 

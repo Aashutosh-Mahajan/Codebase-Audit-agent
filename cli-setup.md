@@ -29,7 +29,7 @@ If you want to develop or modify the tool:
 **1. Clone the Repository**
 ```bash
 git clone https://github.com/Aashutosh-Mahajan/Spectra.git
-cd codebase-audit-agent
+cd spectra
 ```
 
 **2. Create a Virtual Environment**
