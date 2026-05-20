@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="spectra",
+    name="codebase-audit-agent",
     version="1.0.0",
     packages=find_packages(),
     py_modules=["cli"],
@@ -16,6 +16,7 @@ setup(
         "langgraph>=0.4.0",
         "langchain-openai>=0.3.0",
         "langchain-core>=0.3.0",
+        "langchain-community>=0.3.0",
         "gitpython>=3.1.44",
         "markdown>=3.7",
         "xhtml2pdf>=0.2.17",
@@ -25,11 +26,10 @@ setup(
         "tiktoken>=0.9.0",
         "faiss-cpu>=1.7.0",
         "rank_bm25>=0.2.2",
-        "langchain-community>=0.3.0",
     ],
     entry_points={
         "console_scripts": [
-            "spectra=cli:main",
+            "audit-agent=cli:main",
         ],
     },
 )
