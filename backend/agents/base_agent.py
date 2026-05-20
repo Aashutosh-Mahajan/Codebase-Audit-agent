@@ -15,6 +15,8 @@ from pydantic import BaseModel, Field
 
 from backend.api.models import Finding, FileLocation
 from backend.utils.chunker import chunk_file
+from backend.utils.cache import FileCache
+from backend.utils.rag_manager import RAGContextManager
 
 logger = logging.getLogger(__name__)
 
@@ -152,13 +154,13 @@ class BaseAuditAgent(ABC):
         logger.info(f"[{self.agent_name}] Analyzed {len(file_paths)} files, found {len(all_findings)} issues")
         return all_findings
 
-    async def _analyze_single_file_with_cache(self, cache: FileCache, abs_path: str, rel_path: str) -> list[Finding]:
+    async def _analyze_single_file_with_cache(self, cache: FileCache, rag_manager: RAGContextManager, abs_path: str, rel_path: str) -> list[Finding]:
         """Wraps single file analysis to save results to cache."""
-        findings = await self._analyze_single_file(abs_path, rel_path)
+        findings = await self._analyze_single_file(rag_manager, abs_path, rel_path)
         cache.set_cached_findings(self.agent_name, abs_path, rel_path, findings)
         return findings
 
-    async def _analyze_single_file(self, abs_path: str, rel_path: str) -> list[Finding]:
+    async def _analyze_single_file(self, rag_manager: RAGContextManager, abs_path: str, rel_path: str) -> list[Finding]:
         """
         Analyze a single file. Modern LLMs get the full file up to 100k tokens.
 
