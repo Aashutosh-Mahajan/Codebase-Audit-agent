@@ -44,6 +44,7 @@ async def run_audit_pipeline(job_id: str, request: AuditRequest) -> None:
             "agent_findings": {},
             "aggregated_findings": [],
             "report_md": "",
+            "report_md_path": "",
             "report_pdf_path": "",
             "status": "queued",
             "current_step": "Starting audit...",

@@ -39,7 +39,7 @@ def generate_pdf_report(
     
     # Sanitize untested HTML to avoid xhtml2pdf NoneType exceptions
     html_body = _sanitize_html_tags(html_body)
-    html_body = _add_col_widths_to_tables(html_body)
+    html_body = _normalize_tables_for_xhtml2pdf(html_body)
 
     # Load CSS
     css_content = _load_css()
@@ -108,23 +108,88 @@ def _sanitize_html_tags(html: str) -> str:
         return tag_full
     return re.sub(r'<(/?)([a-zA-Z0-9:]+)\b[^>]*>', replacer, html)
 
-def _add_col_widths_to_tables(html: str) -> str:
-    """Add <col> elements to tables for xhtml2pdf compatibility to prevent NoneType layout errors."""
-    def add_cols(match):
+def _normalize_tables_for_xhtml2pdf(html: str) -> str:
+    """
+    Add explicit widths to table cells for xhtml2pdf.
+
+    xhtml2pdf/ReportLab can collapse auto-sized Markdown tables to tiny
+    columns when cells contain long inline code or KeepInFrame content. If the
+    column becomes narrower than its padding, ReportLab raises:
+    "flowable given negative availWidth". Cell-level widths are more reliable
+    than colgroup widths for xhtml2pdf, so we inject both conservative padding
+    and explicit widths into every generated table row.
+    """
+    def normalize_table(match):
         table_html = match.group(0)
-        thead_match = re.search(r'<thead>\s*<tr>(.*?)</tr>\s*</thead>', table_html, re.DOTALL | re.IGNORECASE)
-        if not thead_match:
+
+        first_row = re.search(r'<tr\b[^>]*>(.*?)</tr>', table_html, re.DOTALL | re.IGNORECASE)
+        if not first_row:
             return table_html
-        
-        th_content = thead_match.group(1)
-        th_count = len(re.findall(r'<th\b[^>]*>', th_content, re.IGNORECASE))
-        
-        if th_count > 0:
-            width_pct = 100.0 / th_count
-            colgroup = "<colgroup>" + "".join([f'<col width="{width_pct:.2f}%">' for _ in range(th_count)]) + "</colgroup>\n"
-            table_html = table_html.replace('<thead>', colgroup + '<thead>', 1)
+
+        col_count = len(re.findall(r'<t[hd]\b[^>]*>', first_row.group(1), re.IGNORECASE))
+        if col_count <= 0:
+            return table_html
+
+        if col_count == 2:
+            # Finding detail tables: short label + long explanation.
+            widths = [28, 72]
+        elif col_count == 6:
+            # Agent summary table: keep the agent name readable.
+            widths = [24, 15, 15, 16, 15, 15]
+        else:
+            base_width = int(100 / col_count)
+            widths = [base_width] * col_count
+            widths[-1] += 100 - sum(widths)
+
+        table_html = re.sub(
+            r'<table\b([^>]*)>',
+            r'<table\1 width="100%" style="width:100%; table-layout:fixed;">',
+            table_html,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+
+        def normalize_row(row_match):
+            row_html = row_match.group(0)
+            cell_index = -1
+
+            def normalize_cell(cell_match):
+                nonlocal cell_index
+                cell_index += 1
+                tag = cell_match.group(1)
+                attrs = cell_match.group(2) or ""
+                width = widths[min(cell_index, len(widths) - 1)]
+
+                attrs = re.sub(r'\swidth="[^"]*"', "", attrs, flags=re.IGNORECASE)
+                attrs = re.sub(r"\swidth='[^']*'", "", attrs, flags=re.IGNORECASE)
+                attrs = re.sub(r'\sstyle="[^"]*"', "", attrs, flags=re.IGNORECASE)
+                return (
+                    f'<{tag}{attrs} width="{width}%" '
+                    f'style="width:{width}%; padding:3px 4px; vertical-align:top;">'
+                )
+
+            return re.sub(
+                r'<(td|th)\b([^>]*)>',
+                normalize_cell,
+                row_html,
+                flags=re.IGNORECASE,
+            )
+
+        table_html = re.sub(
+            r'<tr\b[^>]*>.*?</tr>',
+            normalize_row,
+            table_html,
+            flags=re.DOTALL | re.IGNORECASE,
+        )
+
         return table_html
-    return re.sub(r'<table\b[^>]*>.*?</table>', add_cols, html, flags=re.DOTALL | re.IGNORECASE)
+
+    return re.sub(
+        r'<table\b[^>]*>.*?</table>',
+        normalize_table,
+        html,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
 
 
 def _load_css() -> str:

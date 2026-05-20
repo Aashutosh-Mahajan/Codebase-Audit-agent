@@ -18,7 +18,10 @@ class AuditRequest(BaseModel):
     github_token: Optional[str] = Field(default=None, description="GitHub personal access token for private repos")
     include_patterns: list[str] = Field(default_factory=list, description="File patterns to include")
     exclude_patterns: list[str] = Field(
-        default_factory=lambda: ["node_modules", ".git", "dist", "__pycache__", ".venv", "venv", ".env"],
+        default_factory=lambda: [
+            "node_modules", ".git", "dist", "__pycache__", ".venv", "venv",
+            ".spectra", ".audit-agent", ".env", ".env.*", "*.env",
+        ],
         description="File/directory patterns to exclude"
     )
     max_files_per_agent: int = Field(

@@ -5,10 +5,15 @@ import uuid
 import click
 import time
 import logging
+import shutil
 from dotenv import load_dotenv, set_key
+from rich.align import Align
 from rich.console import Console
+from rich.console import Group
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
 from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
 
 # Suppress debug logs from other libraries
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -36,20 +41,57 @@ Markdown and PDF audit reports.
 
 [bold]How to Setup & Run:[/bold]
 1. Navigate to the project directory you want to audit.
-2. Run [green]audit-agent[/green] in your terminal.
-3. The CLI will automatically create a [cyan].audit-agent[/cyan] folder and a template [cyan].env[/cyan] file.
+2. Run [green]spectra[/green] in your terminal.
+3. The CLI will automatically create a [cyan].spectra[/cyan] folder and a template [cyan].env[/cyan] file.
 4. The CLI will pause and instruct you to open the [cyan].env[/cyan] file to add your API Key and Model.
-5. After saving the file, run [green]audit-agent[/green] again to start the audit.
+5. After saving the file, run [green]spectra[/green] again to start the audit.
 
 [bold]Commands:[/bold]
-  [green]audit-agent[/green]                  Run interactive audit in the current directory.
-  [green]audit-agent -d <path>[/green]      Run audit on a specific directory.
-  [green]audit-agent -help[/green]          Show this help message and exit.
+  [green]spectra[/green]                  Run interactive audit in the current directory.
+  [green]spectra -d <path>[/green]      Run audit on a specific directory.
+  [green]spectra -help[/green]          Show this help message and exit.
 
 [bold]Generated Reports:[/bold]
 Reports will be saved locally, and the exact links to the [cyan].md[/cyan] and [cyan].pdf[/cyan] files 
 will be provided at the end of the run.
 """
+
+CONFIG_DIR_NAME = ".spectra"
+LEGACY_CONFIG_DIR_NAME = ".audit-agent"
+
+
+def migrate_legacy_config(target_dir: str) -> None:
+    """Move legacy .audit-agent config into .spectra so all state lives together."""
+    config_dir = os.path.join(target_dir, CONFIG_DIR_NAME)
+    legacy_dir = os.path.join(target_dir, LEGACY_CONFIG_DIR_NAME)
+
+    if not os.path.isdir(legacy_dir):
+        return
+
+    if not os.path.exists(config_dir):
+        shutil.move(legacy_dir, config_dir)
+        console.print(
+            f"[yellow]Moved legacy configuration from[/yellow] "
+            f"[bold]{legacy_dir}[/bold] [yellow]to[/yellow] [bold]{config_dir}[/bold]"
+        )
+        return
+
+    for item_name in os.listdir(legacy_dir):
+        legacy_item = os.path.join(legacy_dir, item_name)
+        config_item = os.path.join(config_dir, item_name)
+        if os.path.exists(config_item):
+            continue
+        shutil.move(legacy_item, config_item)
+        console.print(f"[yellow]Moved legacy item into[/yellow] [bold]{config_item}[/bold]")
+
+    try:
+        if not os.listdir(legacy_dir):
+            os.rmdir(legacy_dir)
+    except OSError:
+        console.print(
+            f"[yellow]Legacy folder still exists because it contains extra files:[/yellow] "
+            f"[bold]{legacy_dir}[/bold]"
+        )
 
 def show_intro():
     console.clear()
@@ -75,7 +117,9 @@ def show_intro():
     console.print("\n")
 
 def setup_config(target_dir):
-    config_dir = os.path.join(target_dir, ".audit-agent")
+    migrate_legacy_config(target_dir)
+
+    config_dir = os.path.join(target_dir, CONFIG_DIR_NAME)
     env_file = os.path.join(config_dir, ".env")
 
     needs_user_edit = False
@@ -155,7 +199,10 @@ async def run_audit(target_dir: str):
         "branch": "",
         "github_token": None,
         "include_patterns": [],
-        "exclude_patterns": ["node_modules", ".git", "dist", "__pycache__", "venv", ".venv", ".spectra"],
+        "exclude_patterns": [
+            "node_modules", ".git", "dist", "__pycache__", "venv", ".venv",
+            ".spectra", ".audit-agent", ".env", ".env.*", "*.env",
+        ],
         "max_files_per_agent": int(os.environ.get("MAX_FILES_PER_AGENT", 20)),
         "max_chunks_per_file": int(os.environ.get("MAX_CHUNKS_PER_FILE", 2)),
         "rate_limit_rpm": int(os.environ.get("OPENAI_RATE_LIMIT_RPM", 20)),
@@ -163,6 +210,7 @@ async def run_audit(target_dir: str):
         "agent_findings": {},
         "aggregated_findings": [],
         "report_md": "",
+        "report_md_path": "",
         "report_pdf_path": "",
         "status": "queued",
         "current_step": "Starting audit...",
@@ -225,6 +273,9 @@ async def run_audit(target_dir: str):
                 expand=False
             ))
             
+            md_path = result.get("report_md_path")
+            pdf_path = result.get("report_pdf_path")
+
             # Report Links formatted cleanly
             if md_path and os.path.exists(md_path):
                 console.print(f"\n📄 [bold cyan]Markdown Report:[/bold cyan]\n   [link=file://{os.path.abspath(md_path)}]{os.path.abspath(md_path)}[/link]")

@@ -67,7 +67,7 @@ ALL_AGENT_NAMES = list(AGENT_CLASSES.keys())
 AGENT_PRIORITY_PATTERNS: dict[str, list[str]] = {
     "security": [
         "**/auth*", "**/*auth*", "**/*login*", "**/*token*", "**/*secret*",
-        "**/*.env*", "**/*jwt*", "**/*oauth*", "**/*permission*",
+        "**/*jwt*", "**/*oauth*", "**/*permission*",
     ],
     "backend": [
         "**/api/**", "**/routes/**", "**/controllers/**", "**/views/**",
@@ -162,6 +162,7 @@ class AuditState(TypedDict):
     aggregated_findings: list
     orchestrator_summary: dict
     report_md: str
+    report_md_path: str
     report_pdf_path: str
     status: str
     current_step: str
@@ -391,7 +392,8 @@ async def report_writer_node(state: AuditState) -> dict:
 
     return {
         "orchestrator_summary": orchestrator_summary,
-        "report_md": report_md, 
+        "report_md": report_md,
+        "report_md_path": os.path.abspath(md_path),
         "report_pdf_path": pdf_path, 
         "status": "done"
     }

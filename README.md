@@ -72,7 +72,7 @@ The core of the system is built on **LangGraph**, utilizing a `StateGraph` with 
 
 The system divides the auditing labor among these specialized AI agents:
 
-1. **🔒 Security Agent**: Focuses on `auth`, `token`, `secret`, `jwt`, and `.env` files. Hunts for OWASP Top 10 vulnerabilities like SQLi, XSS, SSRF, and exposed credentials.
+1. **🔒 Security Agent**: Focuses on `auth`, `token`, `secret`, and `jwt` source files. `.env` files and SPECTRA's local `.spectra` folder are excluded so local API keys are never sent to the LLM.
 2. **🎨 Frontend Agent**: Focuses on `.jsx`, `.tsx`, `.vue`, `.html`, and `.css`. Looks for dangerous innerHTML usage, React memory leaks, stale closures, and accessibility issues.
 3. **⚙️ Backend Agent**: Focuses on server-side logic in `.py`, `.java`, `.go`, `.js`, etc. Checks for input validation flaws, unhandled exceptions, race conditions, and business logic bugs.
 4. **🗄️ Database Agent**: Focuses on `.sql`, ORM models, and `migrations/`. Looks for N+1 query problems, missing indexes, destructive migrations, and injection flaws.

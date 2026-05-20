@@ -86,30 +86,59 @@ KEYWORD_MAP: dict[str, list[str]] = {
 # .js and .ts are ambiguous — route to both frontend and backend
 AMBIGUOUS_EXTENSIONS = {".js", ".ts"}
 
-# Environment / config files always go to security
+# Environment files are deliberately excluded before routing so secrets are not
+# sent to LLMs or reported from SPECTRA's own configuration.
 ENV_PATTERNS = [".env", ".env.*", "*.env", ".env.local", ".env.production"]
+
+# These are always excluded, even if a caller forgets to include them in
+# exclude_patterns. They contain SPECTRA state, reports, caches, and local
+# secrets that should never be audited as project source.
+PROTECTED_EXCLUDES = [
+    ".spectra",
+    ".audit-agent",
+    ".env",
+    ".env.*",
+    "*.env",
+]
 
 # Default exclusion patterns
 DEFAULT_EXCLUDES = [
     "node_modules", ".git", "dist", "build", "__pycache__",
-    ".venv", "venv", ".env", ".tox", ".pytest_cache",
+    ".venv", "venv", ".env", ".env.*", "*.env", ".tox", ".pytest_cache",
     ".mypy_cache", "*.min.js", "*.min.css", "*.map",
-    ".next", ".nuxt", "coverage", ".nyc_output",
+    ".next", ".nuxt", "coverage", ".nyc_output", ".spectra", ".audit-agent",
 ]
 
 
 def _should_exclude(path: str, exclude_patterns: list[str]) -> bool:
     """Check if a file path matches any exclusion pattern."""
-    parts = Path(path).parts
+    normalized_path = path.replace("\\", "/").lower()
+    parts = Path(normalized_path).parts
     for pattern in exclude_patterns:
+        pattern = pattern.replace("\\", "/").lower()
         # Check if any path component matches the pattern
         for part in parts:
             if fnmatch.fnmatch(part, pattern):
                 return True
         # Also check the full path
-        if fnmatch.fnmatch(path, pattern):
+        if fnmatch.fnmatch(normalized_path, pattern):
             return True
     return False
+
+
+def _normalize_exclude_patterns(exclude_patterns: list[str] | None) -> list[str]:
+    """Merge caller excludes with SPECTRA's protected local-state patterns."""
+    if exclude_patterns is None:
+        exclude_patterns = DEFAULT_EXCLUDES
+
+    normalized = []
+    seen = set()
+    for pattern in [*exclude_patterns, *PROTECTED_EXCLUDES]:
+        cleaned = pattern.strip()
+        if cleaned and cleaned not in seen:
+            normalized.append(cleaned)
+            seen.add(cleaned)
+    return normalized
 
 
 def _matches_include_patterns(rel_path: str, filename: str, include_patterns: list[str]) -> bool:
@@ -183,8 +212,7 @@ def route_files(
         Dictionary mapping agent names to lists of relative file paths.
         Keys: "frontend", "backend", "database", "security", "devops", "dependency"
     """
-    if exclude_patterns is None:
-        exclude_patterns = DEFAULT_EXCLUDES
+    exclude_patterns = _normalize_exclude_patterns(exclude_patterns)
     if include_patterns is None:
         include_patterns = []
 

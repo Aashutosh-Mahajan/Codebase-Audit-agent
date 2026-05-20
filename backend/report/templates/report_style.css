@@ -112,16 +112,17 @@ tr {
 th {
     background-color: #1e293b;
     color: #ffffff;
-    padding: 6px 10px;
+    padding: 3px 4px;
     text-align: left;
     font-weight: bold;
 }
 
 td {
-    padding: 5px 10px;
+    padding: 3px 4px;
     border-bottom: 1px solid #e5e7eb;
     vertical-align: top;
     word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 /* ── Code Blocks ── */
