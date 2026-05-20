@@ -143,6 +143,26 @@ def _is_binary_file(file_path: str) -> bool:
     return False
 
 
+def _is_backend_js(content: str) -> bool:
+    """Heuristic to guess if a JS/TS file is backend (Node.js)."""
+    if not content: return False
+    # Common Node.js imports/globals
+    backend_indicators = [
+        "express(", "require('express')", "require('http')",
+        "require('fs')", "require('path')", "mongoose", "sequelize",
+        "process.env", "NestFactory"
+    ]
+    # Common Frontend imports/globals
+    frontend_indicators = [
+        "import React", "from 'react'", "document.getElement", 
+        "window.", "vue", "svelte", "angular"
+    ]
+    
+    b_score = sum(1 for ind in backend_indicators if ind in content)
+    f_score = sum(1 for ind in frontend_indicators if ind in content)
+    
+    return b_score > f_score
+
 def route_files(
     repo_path: str,
     exclude_patterns: list[str] | None = None,
@@ -220,10 +240,18 @@ def route_files(
                 if ext in extensions:
                     matched_agents.add(agent)
 
-            # 2. Ambiguous extensions (.js, .ts) → route to both frontend and backend
+            # 2. Ambiguous extensions (.js, .ts) → route with heuristics
             if ext in AMBIGUOUS_EXTENSIONS:
-                matched_agents.add("frontend")
-                matched_agents.add("backend")
+                try:
+                    with open(abs_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        content = f.read(4000) # Read first 4kb for heuristics
+                    if _is_backend_js(content):
+                        matched_agents.add("backend")
+                    else:
+                        matched_agents.add("frontend")
+                except Exception:
+                    # Fallback to frontend if read fails
+                    matched_agents.add("frontend")
 
             # 3. Filename-based routing
             for agent, patterns in FILENAME_MAP.items():

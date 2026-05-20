@@ -23,6 +23,9 @@ setup(
         "streamlit>=1.42.0",
         "requests>=2.32.0",
         "tiktoken>=0.9.0",
+        "faiss-cpu>=1.7.0",
+        "rank_bm25>=0.2.2",
+        "langchain-community>=0.3.0",
     ],
     entry_points={
         "console_scripts": [

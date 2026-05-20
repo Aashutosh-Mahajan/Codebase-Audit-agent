@@ -213,6 +213,13 @@ async def orchestrator_node(state: AuditState) -> dict:
     if dropped_summary:
         step_msg += f" | file cap applied ({dropped_summary})"
 
+    _update_job_status(job_id, current_step="Building RAG index...", progress_percent=20)
+    try:
+        rag_manager = RAGContextManager(repo_path)
+        rag_manager.build_or_load_index(file_map)
+    except Exception as e:
+        logger.warning(f"Failed to build RAG index: {e}")
+
     _update_job_status(
         job_id, current_step=step_msg,
         progress_percent=20, agents_queued=active_agents,
