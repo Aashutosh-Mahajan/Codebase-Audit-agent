@@ -190,12 +190,12 @@ h2 { font-size: 15pt; color: #1e40af; margin-top: 15px; border-bottom: 1px solid
 h3 { font-size: 12pt; color: #374151; margin-top: 12px; }
 h4 { font-size: 11pt; color: #4b5563; margin-top: 10px; }
 
-table { width: 100%; border: 1px solid #cccccc; margin: 10px 0; font-size: 10pt; }
+table { width: 100%; border: 1px solid #cccccc; margin: 10px 0; font-size: 10pt; table-layout: fixed; }
 th { background-color: #1e293b; color: #ffffff; padding: 6px; text-align: left; font-weight: bold; }
-td { padding: 5px; border-bottom: 1px solid #e5e7eb; }
+td { padding: 5px; border-bottom: 1px solid #e5e7eb; word-wrap: break-word; }
 
-code { background-color: #f3f4f6; font-family: Courier, monospace; font-size: 9pt; }
-pre { background-color: #1e293b; color: #e2e8f0; padding: 10px; font-size: 9pt; }
+code { background-color: #f3f4f6; font-family: Courier, monospace; font-size: 9pt; word-wrap: break-word; }
+pre { background-color: #1e293b; color: #e2e8f0; padding: 10px; font-size: 9pt; white-space: pre-wrap; word-wrap: break-word; }
 pre code { background-color: transparent; }
 
 blockquote { border-left: 3px solid #3b82f6; margin: 10px 0; padding: 5px 10px; background-color: #eff6ff; color: #1e40af; }

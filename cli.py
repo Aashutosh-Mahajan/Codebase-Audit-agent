@@ -52,14 +52,26 @@ will be provided at the end of the run.
 """
 
 def show_intro():
-    lines = LOGO.strip("\n").split("\n")
     console.clear()
-    for i in range(len(lines)):
-        text = "\n".join(lines[:i+1])
-        # Clear screen and redraw to create a "reveal" effect
-        sys.stdout.write("\033[H\033[J") 
-        console.print(f"[bold cyan]{text}[/bold cyan]")
-        time.sleep(0.08)
+    
+    logo_text = Text(LOGO.strip("\n"), style="bold cyan", justify="center")
+    subtitle = Text("MULTI-AGENT CODEBASE AUDIT SYSTEM", style="dim white", justify="center")
+    
+    group = Group(
+        logo_text,
+        Text(""),
+        subtitle
+    )
+    
+    panel = Panel(
+        group,
+        border_style="cyan",
+        padding=(1, 4),
+        expand=False
+    )
+    
+    # Simple clean reveal
+    console.print(Align.center(panel))
     console.print("\n")
 
 def setup_config(target_dir):
@@ -194,23 +206,31 @@ async def run_audit(target_dir: str):
             counts = status.get("finding_counts", {})
             total = status.get("total_findings", 0)
             
+            # Professional Summary Table
+            summary_table = Table(title="[bold]Audit Summary[/bold]", show_header=False, box=None, padding=(0, 2))
+            summary_table.add_column("Level", justify="right")
+            summary_table.add_column("Count", justify="left")
+            
+            summary_table.add_row("🔴 [red]EXTREME[/red]", str(counts.get('EXTREME', 0)))
+            summary_table.add_row("🟠 [dark_orange]HIGH[/dark_orange]", str(counts.get('HIGH', 0)))
+            summary_table.add_row("🟡 [yellow]MEDIUM[/yellow]", str(counts.get('MEDIUM', 0)))
+            summary_table.add_row("🔵 [blue]LOW[/blue]", str(counts.get('LOW', 0)))
+            summary_table.add_row("", "")
+            summary_table.add_row("[bold]TOTAL[/bold]", f"[bold]{total}[/bold]")
+            
             console.print(Panel(
-                f"[bold]Total Findings:[/bold] {total}\n"
-                f"  🔴 [red]EXTREME:[/red] {counts.get('EXTREME', 0)}\n"
-                f"  🟠 [dark_orange]HIGH:[/dark_orange]    {counts.get('HIGH', 0)}\n"
-                f"  🟡 [yellow]MEDIUM:[/yellow]  {counts.get('MEDIUM', 0)}\n"
-                f"  🔵 [blue]LOW:[/blue]     {counts.get('LOW', 0)}",
-                title="Audit Summary",
+                Align.center(summary_table),
+                border_style="green",
+                padding=(1, 2),
                 expand=False
             ))
             
-            md_path = result.get("report_md")
-            pdf_path = result.get("report_pdf_path")
-            
+            # Report Links formatted cleanly
             if md_path and os.path.exists(md_path):
-                console.print(f"📄 [bold]Markdown Report:[/bold] [link=file://{os.path.abspath(md_path)}]{os.path.abspath(md_path)}[/link]")
+                console.print(f"\n📄 [bold cyan]Markdown Report:[/bold cyan]\n   [link=file://{os.path.abspath(md_path)}]{os.path.abspath(md_path)}[/link]")
             if pdf_path and os.path.exists(pdf_path):
-                console.print(f"📕 [bold]PDF Report:[/bold]      [link=file://{os.path.abspath(pdf_path)}]{os.path.abspath(pdf_path)}[/link]")
+                console.print(f"\n📕 [bold red]PDF Report:[/bold red]\n   [link=file://{os.path.abspath(pdf_path)}]{os.path.abspath(pdf_path)}[/link]")
+            console.print("\n")
                 
         except Exception as e:
             console.print(f"\n[red]Audit failed with exception:[/red] {e}")
