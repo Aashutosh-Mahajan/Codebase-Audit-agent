@@ -8,26 +8,15 @@ import logging
 from dotenv import load_dotenv, set_key
 from rich.align import Align
 from rich.console import Console
-from rich.console import Group
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
 
 # Suppress debug logs from other libraries
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 console = Console()
-
-LOGO = r"""
-  SSSSS  PPPPP   EEEEE   CCCC  TTTTT  RRRR    AAA
-  S      P    P  E      C        T    R   R  A   A
-  SSSSS  PPPPP   EEEE   C        T    RRRR   AAAAA
-      S  P       E      C        T    R  R   A   A
-  SSSSS  P       EEEEE   CCCC    T    R   R  A   A
-          MULTI-AGENT CODEBASE AUDIT SYSTEM
-"""
 
 HELP_TEXT = """
 [bold cyan]SPECTRA CLI[/bold cyan]
@@ -58,26 +47,9 @@ CONFIG_DIR_NAME = ".spectra"
 
 def show_intro():
     console.clear()
-    
-    logo_text = Text(LOGO.strip("\n"), style="bold cyan", justify="center")
-    subtitle = Text("MULTI-AGENT CODEBASE AUDIT SYSTEM", style="dim white", justify="center")
-    
-    group = Group(
-        logo_text,
-        Text(""),
-        subtitle
-    )
-    
-    panel = Panel(
-        group,
-        border_style="cyan",
-        padding=(1, 4),
-        expand=False
-    )
-    
-    # Simple clean reveal
-    console.print(Align.center(panel))
-    console.print("\n")
+    console.print("[bold cyan]SPECTRA[/bold cyan] [dim]codebase audit[/dim]")
+    console.print("[dim]Security, dependency, architecture, and report generation.[/dim]")
+    console.print()
 
 def setup_config(target_dir):
     config_dir = os.path.join(target_dir, CONFIG_DIR_NAME)
@@ -100,10 +72,12 @@ def setup_config(target_dir):
             f.write("# - gpt-5.4-mini (Latest / Future-proof)\n")
             f.write("OPENAI_MODEL=gpt-4o-mini\n")
             
-        console.print(f"[green]Created configuration directory at[/green] [bold]{config_dir}[/bold]\n")
+        console.print("[green]created[/green]  workspace")
+        console.print(f"         [cyan]{config_dir}[/cyan]\n")
         needs_user_edit = True
     else:
-        console.print(f"[green]Configuration directory found at[/green] [bold]{config_dir}[/bold]\n")
+        console.print("[green]using[/green]    workspace")
+        console.print(f"         [cyan]{config_dir}[/cyan]\n")
         # Load existing env vars
         load_dotenv(env_file)
         api_key = os.getenv("OPENAI_API_KEY")
@@ -111,15 +85,16 @@ def setup_config(target_dir):
             needs_user_edit = True
 
     if needs_user_edit:
-        env_content = "OPENAI_API_KEY=sk-your-openai-api-key\n\n# Select the OpenAI Model to use:\n# - gpt-4o-mini (Fast & Cost-effective, Recommended)\n# - gpt-4o      (High Performance & Accuracy)\n# - gpt-5.4-mini (Latest / Future-proof)\nOPENAI_MODEL=gpt-4o-mini"
-        console.print(Panel(
-            f"[yellow]Action Required![/yellow]\n\n"
-            f"A configuration file has been created at:\n[bold cyan]{env_file}[/bold cyan]\n\n"
-            f"Please open this file and fill it out like this:\n\n"
-            f"[green]{env_content}[/green]\n\n"
-            f"Once done, run the [bold green]spectra[/bold green] command again.",
-            title="Setup Paused"
-        ))
+        console.print("[bold yellow]setup required[/bold yellow]")
+        console.print("Add your OpenAI key before running the audit.\n")
+
+        console.print("  [dim]config[/dim]  " + f"[cyan]{env_file}[/cyan]")
+        console.print("  [dim]set[/dim]     [green]OPENAI_API_KEY=sk-your-openai-api-key[/green]")
+        console.print("  [dim]model[/dim]   [green]OPENAI_MODEL=gpt-4o-mini[/green]")
+        console.print()
+        console.print("[bold]next[/bold]")
+        console.print("  1. Edit the config file above")
+        console.print("  2. Run [cyan]spectra[/cyan] again")
         sys.exit(0)
 
     # Force update current process env so the backend picks it up directly
@@ -262,7 +237,7 @@ def main(dir, help):
     show_intro()
     
     target_dir = os.path.abspath(dir)
-    console.print(f"[bold]Target Directory:[/bold] {target_dir}\n")
+    console.print(f"[dim]project[/dim]  [cyan]{target_dir}[/cyan]\n")
 
     # Run the async loop
     asyncio.run(run_audit(target_dir))
